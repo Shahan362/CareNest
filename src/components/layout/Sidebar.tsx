@@ -103,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   return (
     <aside className="hidden md:flex flex-col w-64 h-screen bg-secondary text-white">
       <div className="p-4 flex items-center">
-        <h1 className="text-xl font-bold">Homecare</h1>
+        <h1 className="text-xl font-bold">CommandCare</h1>
       </div>
       
       <div className="p-2 flex-grow">

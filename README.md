@@ -1,10 +1,10 @@
-# Home Care Platform 🏠
+# CommandCare 🏠
 
 A comprehensive web application designed to streamline healthcare management for patients, caregivers, family members, and administrators in home care settings.
 
 ## 🎯 Project Overview
 
-The Home Care Platform is a modern, role-based healthcare management system that facilitates seamless communication and coordination between all stakeholders in home healthcare. The platform provides dedicated interfaces for four distinct user types: administrators, caregivers, patients, and family members.
+The CommandCare is a modern, role-based healthcare management system that facilitates seamless communication and coordination between all stakeholders in home healthcare. The platform provides dedicated interfaces for four distinct user types: administrators, caregivers, patients, and family members.
 
 ## 🚀 Key Features
 

@@ -76,7 +76,7 @@ const Header: React.FC<HeaderProps> = ({ title, role }) => {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="md:hidden font-bold text-secondary text-lg">Homecare</div>
+        <div className="md:hidden font-bold text-secondary text-lg">CommandCare</div>
         <h1 className="text-xl font-bold md:text-2xl hidden md:block">{title}</h1>
         <div className="flex items-center space-x-4">
           <Link

@@ -74,7 +74,7 @@ const LoginPage: React.FC = () => {
       {/* Hero section */}
       <div className="bg-secondary md:w-1/2 p-8 flex flex-col justify-center">
         <div className="max-w-md mx-auto text-white">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Homecare</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">CommandCare</h1>
           <p className="text-xl mb-8">Healthcare coordination platform for homecare agencies, caregivers, patients, and families.</p>
           <div className="space-y-6 text-sm">
             <div className="flex items-start">
@@ -107,7 +107,7 @@ const LoginPage: React.FC = () => {
         <div className="max-w-md mx-auto w-full">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">Sign In</h2>
-            <p className="text-gray-600">Access your Homecare account</p>
+            <p className="text-gray-600">Access your CommandCare account</p>
           </div>
           
           <Form {...form}>
