@@ -7,7 +7,6 @@ import { Search } from 'lucide-react';
 interface Caregiver {
   id: string;
   name: string;
-  role: string;
   specialty: string;
   status: string;
   patients: number;

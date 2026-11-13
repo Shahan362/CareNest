@@ -1,448 +1,130 @@
-
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { addDays, format, startOfDay } from 'date-fns';
+import { Plus } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Clock, CheckCircle, XCircle, Calendar, User } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import NotLinkedNotice from '@/components/caregiver/NotLinkedNotice';
+import RequestFormDialog from '@/components/patient/RequestFormDialog';
+import { EmptyState, ErrorState, LoadingState } from '@/components/admin/DataState';
+import { usePatientVisits } from '@/hooks/data/usePatientData';
+import { useRequests, useWithdrawRequest } from '@/hooks/data/useRequests';
+import type { CareRequestRow } from '@/lib/database.types';
+import { formatDate, formatDateTime, formatTime } from '@/lib/format';
+import { REQUEST_STATUS_LABEL, REQUEST_STATUS_STYLE, REQUEST_TYPE_LABEL } from '@/lib/requests';
+import { cn } from '@/lib/utils';
 
+/** Requests to the office: change or cancel a visit, extra visit, change carer or care. */
 const PatientRequests: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('active');
-  const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const { toast } = useToast();
-  
-  // Mock data for requests
-  const [activeRequests, setActiveRequests] = useState([
-    {
-      id: 1,
-      type: 'Schedule Change',
-      description: 'Request to move Friday appointment from 2pm to 4pm',
-      status: 'pending',
-      dateSubmitted: 'May 22, 2025',
-      priority: 'medium'
-    },
-    {
-      id: 2,
-      type: 'Medication Refill',
-      description: 'Need refill for blood pressure medication',
-      status: 'in-review',
-      dateSubmitted: 'May 21, 2025',
-      priority: 'high'
-    }
-  ]);
-  
-  const [completedRequests, setCompletedRequests] = useState([
-    {
-      id: 3,
-      type: 'Caregiver Preference',
-      description: 'Requested to have Jane Doe as primary caregiver',
-      status: 'approved',
-      dateSubmitted: 'May 15, 2025',
-      dateCompleted: 'May 17, 2025'
-    },
-    {
-      id: 4,
-      type: 'Special Equipment',
-      description: 'Requested walker with seat for mobility assistance',
-      status: 'denied',
-      dateSubmitted: 'May 10, 2025',
-      dateCompleted: 'May 12, 2025',
-      notes: 'Insurance does not cover this equipment. Alternative options provided.'
-    }
-  ]);
+  const range = useMemo(() => {
+    const today = startOfDay(new Date());
+    return { from: addDays(today, -60).toISOString(), to: addDays(today, 43).toISOString() };
+  }, []);
+  const { data: visits, patient, isLoading, error, refetch, notLinked } = usePatientVisits(range.from, range.to);
+  const requests = useRequests();
+  const withdraw = useWithdrawRequest();
+  const [open, setOpen] = useState(false);
 
-  // Form state for new request
-  const [newRequest, setNewRequest] = useState({
-    type: '',
-    description: '',
-    priority: 'medium'
-  });
-  
-  const handleCreateRequest = () => {
-    if (!newRequest.type || !newRequest.description) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill out all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-    
-    const newRequestObj = {
-      id: Date.now(),
-      type: newRequest.type,
-      description: newRequest.description,
-      status: 'pending',
-      dateSubmitted: formattedDate,
-      priority: newRequest.priority
-    };
-    
-    setActiveRequests([newRequestObj, ...activeRequests]);
-    setNewRequest({ type: '', description: '', priority: 'medium' });
-    setShowNewRequestDialog(false);
-    
-    toast({
-      title: "Request Submitted",
-      description: "Your request has been submitted successfully"
-    });
-  };
-  
-  const handleEditRequest = (request: any) => {
-    setSelectedRequest(request);
-    setNewRequest({
-      type: request.type,
-      description: request.description,
-      priority: request.priority || 'medium'
-    });
-    setShowNewRequestDialog(true);
-  };
-  
-  const handleUpdateRequest = () => {
-    if (!selectedRequest) return;
-    
-    const updatedRequests = activeRequests.map(req => 
-      req.id === selectedRequest.id 
-        ? { ...req, type: newRequest.type, description: newRequest.description, priority: newRequest.priority }
-        : req
-    );
-    
-    setActiveRequests(updatedRequests);
-    setNewRequest({ type: '', description: '', priority: 'medium' });
-    setSelectedRequest(null);
-    setShowNewRequestDialog(false);
-    
-    toast({
-      title: "Request Updated",
-      description: "Your request has been updated successfully"
-    });
-  };
-  
-  const handleCancelRequest = (request: any) => {
-    // Move to completed with cancelled status
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-    
-    const cancelledRequest = {
-      ...request,
-      status: 'denied',
-      dateCompleted: formattedDate,
-      notes: 'Cancelled by patient'
-    };
-    
-    setCompletedRequests([cancelledRequest, ...completedRequests]);
-    setActiveRequests(activeRequests.filter(req => req.id !== request.id));
-    
-    toast({
-      title: "Request Cancelled",
-      description: "Your request has been cancelled"
-    });
-  };
-  
-  const handleViewDetails = (request: any) => {
-    setSelectedRequest(request);
-    setShowDetailsDialog(true);
-  };
-  
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="flex items-center text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-            <Clock className="h-3 w-3 mr-1" /> Pending
-          </span>
-        );
-      case 'in-review':
-        return (
-          <span className="flex items-center text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-            <User className="h-3 w-3 mr-1" /> In Review
-          </span>
-        );
-      case 'approved':
-        return (
-          <span className="flex items-center text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-            <CheckCircle className="h-3 w-3 mr-1" /> Approved
-          </span>
-        );
-      case 'denied':
-        return (
-          <span className="flex items-center text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-            <XCircle className="h-3 w-3 mr-1" /> Denied
-          </span>
-        );
-      default:
-        return null;
+  const now = new Date();
+  const upcoming = visits.filter((v) => v.start > now && v.row.status === 'scheduled');
+  const visitById = new Map(visits.map((v) => [v.row.id, v]));
+  const all = requests.data ?? [];
+  const openOnes = all.filter((r) => r.status === 'pending');
+  const closed = all.filter((r) => r.status !== 'pending');
+
+  const doWithdraw = async (r: CareRequestRow) => {
+    if (!window.confirm('Withdraw this request?')) return;
+    try {
+      await withdraw.mutateAsync(r.id);
+      toast.success('Request withdrawn');
+    } catch (e) {
+      toast.error((e as Error).message);
     }
   };
-  
-  return (
-    <Layout title="My Requests" role="patient">
-      <div className="flex justify-between mb-6">
-        <div className="flex space-x-1">
-          <Button 
-            variant={activeTab === 'active' ? 'default' : 'outline'} 
-            onClick={() => setActiveTab('active')}
-            className="relative"
-          >
-            Active
-            {activeRequests.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {activeRequests.length}
-              </span>
-            )}
-          </Button>
-          <Button 
-            variant={activeTab === 'completed' ? 'default' : 'outline'} 
-            onClick={() => setActiveTab('completed')}
-          >
-            Completed
-          </Button>
+
+  const card = (r: CareRequestRow) => {
+    const v = r.visit_id ? visitById.get(r.visit_id) : undefined;
+    return (
+      <li key={r.id} className="bg-white rounded-lg border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="font-medium">{REQUEST_TYPE_LABEL[r.type]}</p>
+            <p className="text-xs text-gray-500">Sent {formatDateTime(r.created_at)}</p>
+          </div>
+          <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium border', REQUEST_STATUS_STYLE[r.status])}>
+            {REQUEST_STATUS_LABEL[r.status]}
+          </span>
         </div>
-        <Dialog open={showNewRequestDialog} onOpenChange={setShowNewRequestDialog}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center">
-              <Plus className="h-4 w-4 mr-2" />
-              New Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{selectedRequest ? 'Edit Request' : 'New Request'}</DialogTitle>
-              <DialogDescription>
-                Fill out the details for your request. We'll notify you once it's processed.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Request Type</label>
-                <Select 
-                  value={newRequest.type} 
-                  onValueChange={(value) => setNewRequest({...newRequest, type: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select request type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Schedule Change">Schedule Change</SelectItem>
-                    <SelectItem value="Medication Refill">Medication Refill</SelectItem>
-                    <SelectItem value="Caregiver Preference">Caregiver Preference</SelectItem>
-                    <SelectItem value="Special Equipment">Special Equipment</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <Textarea 
-                  placeholder="Describe your request in detail" 
-                  value={newRequest.description}
-                  onChange={(e) => setNewRequest({...newRequest, description: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Priority</label>
-                <Select 
-                  value={newRequest.priority} 
-                  onValueChange={(value) => setNewRequest({...newRequest, priority: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setNewRequest({ type: '', description: '', priority: 'medium' });
-                setSelectedRequest(null);
-                setShowNewRequestDialog(false);
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={selectedRequest ? handleUpdateRequest : handleCreateRequest}>
-                {selectedRequest ? 'Update Request' : 'Submit Request'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {v && (
+          <p className="text-sm text-gray-700 mt-2">
+            Visit: {format(v.start, 'EEEE')} {formatDate(v.start)}, {formatTime(v.start)}-{formatTime(v.end)}
+          </p>
+        )}
+        {(r.preferred_date || r.preferred_time) && (
+          <p className="text-sm text-gray-700">
+            Preferred: {r.preferred_date && formatDate(r.preferred_date)} {r.preferred_time?.slice(0, 5)}
+          </p>
+        )}
+        <p className="text-sm mt-2 whitespace-pre-wrap">{r.details}</p>
+        {r.admin_response && (
+          <div className="mt-3 rounded-lg bg-gray-50 border p-3 text-sm">
+            <p className="text-xs font-semibold text-gray-600 mb-1">
+              Reply from the office{r.responded_at && ` · ${formatDateTime(r.responded_at)}`}
+            </p>
+            <p className="whitespace-pre-wrap">{r.admin_response}</p>
+          </div>
+        )}
+        {r.status === 'pending' && (
+          <Button variant="ghost" size="sm" className="mt-2 text-red-700" disabled={withdraw.isPending} onClick={() => doWithdraw(r)}>
+            Withdraw
+          </Button>
+        )}
+      </li>
+    );
+  };
+
+  const loading = isLoading || requests.isLoading;
+  const err = error ?? requests.error;
+
+  return (
+    <Layout title="Requests" role="patient">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <p className="text-sm text-muted-foreground">Ask the office to change your visits or care. You'll see their reply here.</p>
+        <Button onClick={() => setOpen(true)} disabled={!patient}>
+          <Plus className="h-4 w-4 mr-2" />New request
+        </Button>
       </div>
-      
-      {activeTab === 'active' ? (
-        <div className="space-y-4">
-          {activeRequests.map((request) => (
-            <Card key={request.id} className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex-grow">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-medium">{request.type}</h3>
-                    {request.priority === 'high' && (
-                      <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
-                        High Priority
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">{request.description}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center text-xs text-gray-500 gap-y-1 gap-x-4">
-                    <div className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>Submitted: {request.dateSubmitted}</span>
-                    </div>
-                    <div>
-                      {renderStatusBadge(request.status)}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex md:flex-col gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 md:flex-auto"
-                    onClick={() => handleEditRequest(request)}
-                  >
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 md:flex-auto text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
-                    onClick={() => handleCancelRequest(request)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-          
-          {activeRequests.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No active requests</p>
-            </div>
-          )}
+
+      {notLinked ? (
+        <NotLinkedNotice who="patient" />
+      ) : err ? (
+        <div className="bg-white rounded-lg border"><ErrorState error={err} onRetry={() => { refetch(); requests.refetch(); }} /></div>
+      ) : loading ? (
+        <LoadingState />
+      ) : all.length === 0 ? (
+        <div className="bg-white rounded-lg border">
+          <EmptyState title="No requests yet" description="Need to move a visit, book an extra one or change your carer? Send a request." />
         </div>
       ) : (
-        <div className="space-y-4">
-          {completedRequests.map((request) => (
-            <Card key={request.id} className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex-grow">
-                  <h3 className="font-medium mb-2">{request.type}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{request.description}</p>
-                  {request.notes && (
-                    <p className="text-sm bg-gray-50 p-2 rounded mb-3">
-                      <span className="font-medium">Note:</span> {request.notes}
-                    </p>
-                  )}
-                  <div className="flex flex-col sm:flex-row sm:items-center text-xs text-gray-500 gap-y-1 gap-x-4">
-                    <div className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>Submitted: {request.dateSubmitted}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>Completed: {request.dateCompleted}</span>
-                    </div>
-                    <div>
-                      {renderStatusBadge(request.status)}
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleViewDetails(request)}
-                >
-                  View Details
-                </Button>
-              </div>
-            </Card>
-          ))}
-          
-          {completedRequests.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No completed requests</p>
-            </div>
+        <div className="space-y-6">
+          {openOnes.length > 0 && (
+            <section>
+              <h2 className="font-semibold mb-2">Waiting for a reply</h2>
+              <ul className="space-y-3">{openOnes.map(card)}</ul>
+            </section>
+          )}
+          {closed.length > 0 && (
+            <section>
+              <h2 className="font-semibold mb-2">Answered</h2>
+              <ul className="space-y-3">{closed.map(card)}</ul>
+            </section>
           )}
         </div>
       )}
 
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Request Details</DialogTitle>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Request Type</h3>
-                <p>{selectedRequest.type}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Description</h3>
-                <p>{selectedRequest.description}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Submitted</h3>
-                  <p>{selectedRequest.dateSubmitted}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Completed</h3>
-                  <p>{selectedRequest.dateCompleted}</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                <div className="mt-1">{renderStatusBadge(selectedRequest.status)}</div>
-              </div>
-              {selectedRequest.notes && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Notes</h3>
-                  <p className="bg-gray-50 p-3 rounded mt-1">{selectedRequest.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setShowDetailsDialog(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {patient && (
+        <RequestFormDialog open={open} onOpenChange={setOpen} patientId={patient.id} upcoming={upcoming} />
+      )}
     </Layout>
   );
 };

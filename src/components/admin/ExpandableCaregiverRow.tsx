@@ -40,7 +40,16 @@ const ExpandableCaregiverRow: React.FC<ExpandableCaregiverRowProps> = ({
               <User className="h-4 w-4" />
             </div>
             <div>
-              <span className="font-medium">{caregiver.name}</span>
+              <button
+                type="button"
+                className="font-medium hover:text-primary hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCaregiverClick(caregiver);
+                }}
+              >
+                {caregiver.name}
+              </button>
               {patientCount > 0 && (
                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                   {patientCount} patients
@@ -49,7 +58,6 @@ const ExpandableCaregiverRow: React.FC<ExpandableCaregiverRowProps> = ({
             </div>
           </div>
         </TableCell>
-        <TableCell className="w-32">{caregiver.role}</TableCell>
         <TableCell className="w-32">{caregiver.specialty}</TableCell>
         <TableCell className="w-24">
           <span className={`px-2 py-1 rounded-full text-xs ${
@@ -77,7 +85,7 @@ const ExpandableCaregiverRow: React.FC<ExpandableCaregiverRowProps> = ({
       
       {isExpanded && patientCount > 0 && (
         <TableRow>
-          <TableCell colSpan={7} className="p-0">
+          <TableCell colSpan={6} className="p-0">
             <div className="px-4 pb-4 pt-2 bg-gray-50/50">
               <div className="ml-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">

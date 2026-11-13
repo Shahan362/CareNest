@@ -13,26 +13,20 @@ import { cn } from '@/lib/utils';
 interface HeatmapFiltersProps {
   weekStartDate: Date;
   region: string;
-  role: string;
   showOverbookedOnly: boolean;
   regions: string[];
-  roles: string[];
   onWeekChange: (date: Date) => void;
   onRegionChange: (region: string) => void;
-  onRoleChange: (role: string) => void;
   onShowOverbookedToggle: (checked: boolean) => void;
 }
 
 const HeatmapFilters: React.FC<HeatmapFiltersProps> = ({
   weekStartDate,
   region,
-  role,
   showOverbookedOnly,
   regions,
-  roles,
   onWeekChange,
   onRegionChange,
-  onRoleChange,
   onShowOverbookedToggle,
 }) => {
   return (
@@ -97,21 +91,6 @@ const HeatmapFilters: React.FC<HeatmapFiltersProps> = ({
           </Select>
         </div>
 
-        {/* Role Filter */}
-        <div className="flex items-center gap-2">
-          <Label className="text-sm font-medium">Role:</Label>
-          <Select value={role} onValueChange={onRoleChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roles.map(r => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
         {/* Show Overbooked Only Toggle */}
         <div className="flex items-center gap-2">

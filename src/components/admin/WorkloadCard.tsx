@@ -14,7 +14,7 @@ import {
 interface Caregiver {
   id: string;
   name: string;
-  role: string;
+  specialty: string;
   photo: string;
   assignedHours: number;
   maxHours: number;
@@ -63,7 +63,7 @@ const WorkloadCard: React.FC<WorkloadCardProps> = ({ caregiver, loadStatus, load
         </div>
         <div>
           <h3 className="font-medium">{caregiver.name}</h3>
-          <p className="text-sm text-gray-500">{caregiver.role}</p>
+          <p className="text-sm text-gray-500">{caregiver.specialty}</p>
         </div>
       </div>
       

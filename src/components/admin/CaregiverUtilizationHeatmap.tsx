@@ -60,7 +60,7 @@ const CaregiverUtilizationHeatmap: React.FC<CaregiverUtilizationHeatmapProps> = 
                 <tr key={caregiver.id} className="border-b hover:bg-muted/20">
                   <td className="p-4 sticky left-0 bg-background border-r">
                     <div className="font-medium">{caregiver.name}</div>
-                    <div className="text-sm text-muted-foreground">{caregiver.role}</div>
+                    <div className="text-sm text-muted-foreground">{caregiver.specialty}</div>
                     <div className="text-xs text-muted-foreground">{caregiver.region}</div>
                   </td>
                   {weekDays.map((day) => {

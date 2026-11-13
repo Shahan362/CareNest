@@ -1,10 +1,10 @@
-# CommandCare 🏠
+# CareNest 🏠
 
-A comprehensive web application designed to streamline healthcare management for patients, caregivers, family members, and administrators in home care settings.
+A comprehensive web application designed to streamline healthcare management for patients, caregivers, and administrators in home care settings.
 
 ## 🎯 Project Overview
 
-The CommandCare is a modern, role-based healthcare management system that facilitates seamless communication and coordination between all stakeholders in home healthcare. The platform provides dedicated interfaces for four distinct user types: administrators, caregivers, patients, and family members.
+The CareNest is a modern, role-based healthcare management system that facilitates seamless communication and coordination between all stakeholders in home healthcare. The platform provides dedicated interfaces for three distinct user types: administrators, caregivers, and patients.
 
 ## 🚀 Key Features
 
@@ -22,22 +22,15 @@ The CommandCare is a modern, role-based healthcare management system that facili
 - **Visit Checklists**: Complete standardized care tasks
 - **Notes & Documentation**: Record visit notes and observations
 - **Certifications**: Track professional certifications and requirements
-- **Communication**: Direct messaging with patients, families, and admin
+- **Communication**: Direct messaging with patients and admin
 
 ### 👤 Patient Dashboard
 - **Care Plan Overview**: View personalized care plans and treatments
 - **Visit History**: Track completed and upcoming visits
 - **Request Management**: Submit care requests and modifications
 - **Feedback System**: Provide feedback on care quality
-- **Messaging**: Communicate with caregivers and family members
+- **Messaging**: Communicate with caregivers and the agency
 - **Profile Management**: Update personal information and preferences
-
-### 👨‍👩‍👧‍👦 Family Portal
-- **Patient Monitoring**: Overview of family member's care status
-- **Visit Tracking**: Monitor scheduled and completed visits
-- **Communication**: Stay connected with caregivers and care team
-- **Feedback & Requests**: Submit feedback and special requests
-- **Notifications**: Receive updates on care progress
 
 ## 🛠️ Tech Stack
 
@@ -85,8 +78,7 @@ src/
 ├── pages/
 │   ├── admin/          # Admin dashboard pages
 │   ├── caregiver/      # Caregiver portal pages
-│   ├── patient/        # Patient dashboard pages
-│   └── family/         # Family portal pages
+│   └── patient/        # Patient dashboard pages
 ├── hooks/              # Custom React hooks
 ├── types/              # TypeScript type definitions
 └── lib/                # Utility functions and configurations

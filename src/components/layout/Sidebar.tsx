@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth, displayName } from '@/contexts/AuthContext';
+import { ROLE_LABEL } from '@/lib/supabase';
 import { 
   Calendar, 
   Home, 
@@ -24,6 +26,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavBadges } from '@/hooks/useNavBadges';
 import { toast } from 'sonner';
 
 interface NavItem {
@@ -33,12 +36,14 @@ interface NavItem {
 }
 
 interface SidebarProps {
-  role: 'admin' | 'caregiver' | 'patient' | 'family';
+  role: 'admin' | 'caregiver' | 'patient';
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
+  const name = displayName(profile);
   
   const adminNavItems: NavItem[] = [
     { label: 'Dashboard', href: '/admin', icon: Home },
@@ -46,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
     { label: 'Calendar', href: '/admin/calendar', icon: Calendar },
     { label: 'Caregivers', href: '/admin/caregivers', icon: Users },
     { label: 'Patients', href: '/admin/patients', icon: Heart },
+    { label: 'Requests', href: '/admin/requests', icon: Send },
     { label: 'Billing', href: '/admin/billing', icon: DollarSign },
     { label: 'Reports', href: '/admin/reports', icon: BarChart },
     { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
@@ -56,9 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const caregiverNavItems: NavItem[] = [
     { label: 'Home', href: '/caregiver', icon: Home },
     { label: 'Schedule', href: '/caregiver/schedule', icon: Calendar },
-    { label: 'Checklist', href: '/caregiver/checklist', icon: Clipboard },
-    { label: 'Notes', href: '/caregiver/notes', icon: FileEdit },
-    { label: 'Certifications', href: '/caregiver/certifications', icon: Award },
+    { label: 'My Patients', href: '/caregiver/patients', icon: Users },
     { label: 'Messages', href: '/caregiver/messages', icon: MessageSquare },
     { label: 'Notifications', href: '/caregiver/notifications', icon: Bell },
     { label: 'Profile', href: '/caregiver/profile', icon: User },
@@ -66,44 +70,35 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   
   const patientNavItems: NavItem[] = [
     { label: 'Home', href: '/patient', icon: Home },
-    { label: 'Visit History', href: '/patient/visits', icon: Clock },
+    { label: 'My Visits', href: '/patient/visits', icon: Clock },
     { label: 'Care Plan', href: '/patient/care-plan', icon: FileCheck },
     { label: 'Requests', href: '/patient/requests', icon: Send },
+    { label: 'Invoices', href: '/patient/invoices', icon: FileText },
     { label: 'Feedback', href: '/patient/feedback', icon: ThumbsUp },
     { label: 'Messages', href: '/patient/messages', icon: MessageSquare },
     { label: 'Notifications', href: '/patient/notifications', icon: Bell },
-    { label: 'Settings', href: '/patient/settings', icon: Settings },
-  ];
-  
-  const familyNavItems: NavItem[] = [
-    { label: 'Home', href: '/family', icon: Home },
-    { label: 'Visit Summary', href: '/family/visits', icon: Clock },
-    { label: 'Feedback', href: '/family/feedback', icon: ThumbsUp },
-    { label: 'Requests', href: '/family/requests', icon: Send },
-    { label: 'Messages', href: '/family/messages', icon: MessageSquare },
-    { label: 'Notifications', href: '/family/notifications', icon: Bell },
-    { label: 'Settings', href: '/family/settings', icon: Settings },
+    { label: 'Profile', href: '/patient/profile', icon: User },
   ];
   
   const navItemsByRole = {
     admin: adminNavItems,
     caregiver: caregiverNavItems,
     patient: patientNavItems,
-    family: familyNavItems,
   };
   
   const navItems = navItemsByRole[role];
+  const badges = useNavBadges();
   
-  const handleLogout = () => {
-    // In a real app this would clear auth tokens, etc.
+  const handleLogout = async () => {
+    await signOut();
     toast.success("You've been logged out successfully");
     navigate('/');
   };
   
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen bg-secondary text-white">
+    <aside className="print:hidden hidden md:flex flex-col w-64 h-screen bg-secondary text-white">
       <div className="p-4 flex items-center">
-        <h1 className="text-xl font-bold">CommandCare</h1>
+        <h1 className="text-xl font-bold">CareNest</h1>
       </div>
       
       <div className="p-2 flex-grow">
@@ -112,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </div>
         <nav className="space-y-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.href;
+            const isActive = location.pathname === item.href || (item.href.split('/').length > 2 && location.pathname.startsWith(item.href + '/'));
             
             return (
               <Link
@@ -127,6 +122,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
               >
                 <item.icon className="w-5 h-5 mr-3" />
                 <span>{item.label}</span>
+                {badges.forHref(item.href) > 0 && (
+                  <span className="ml-auto rounded-full bg-red-500 text-white text-xs font-semibold px-1.5 min-w-[1.25rem] text-center">
+                    {badges.forHref(item.href) > 99 ? '99+' : badges.forHref(item.href)}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -146,20 +146,14 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center">
           <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-secondary font-medium mr-2">
-            {role.charAt(0).toUpperCase()}
+            {(name || role).charAt(0).toUpperCase()}
           </div>
           <div>
             <div className="text-sm font-medium">
-              {role === 'admin' ? 'Admin User' : 
-               role === 'caregiver' ? 'Jane Doe, RN' : 
-               role === 'patient' ? 'John Smith' : 
-               'Family Member'}
+              {name}
             </div>
             <div className="text-xs text-white/60">
-              {role === 'admin' ? 'Administrator' : 
-               role === 'caregiver' ? 'Caregiver' : 
-               role === 'patient' ? 'Patient' : 
-               'Family Access'}
+              {ROLE_LABEL[role]}
             </div>
           </div>
         </div>

@@ -1,183 +1,150 @@
-
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import React, { useMemo } from 'react';
+import { endOfWeek, startOfWeek } from 'date-fns';
+import { toast } from 'sonner';
+import { CheckCircle2, Clock, Loader2, MapPin, Star, XCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { MapPin, Clock, Star, Brain } from 'lucide-react';
+import { useCaregiverRows, usePatientRows, useSaveVisit, useVisitRows } from '@/hooks/data/useAgencyData';
+import type { VisitView } from '@/hooks/useAdminViews';
+import { formatDate, formatTime, fullName, initials } from '@/lib/format';
+import { findConflicts, isActiveVisit } from '@/lib/visits';
 
 interface CaregiverSuggestionsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  visit: any;
-  onAssign: (visitId: string, caregiverId: string, timeSlot: string) => void;
+  visit: VisitView | null;
 }
 
-const CaregiverSuggestionsModal: React.FC<CaregiverSuggestionsModalProps> = ({
-  isOpen,
-  onClose,
-  visit,
-  onAssign,
-}) => {
-  // Mock data for AI suggestions
-  const suggestedCaregivers = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      photo: '/placeholder.svg',
-      specializations: ['RN', 'Wound Care', 'Medication Management'],
-      region: 'North',
-      assignedHours: 28,
-      maxHours: 40,
-      matchScore: 'good',
-      rating: 4.8,
-      distance: '2.3 miles',
-      availability: 'Available',
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      photo: '/placeholder.svg',
-      specializations: ['LPN', 'Physical Therapy', 'Mobility'],
-      region: 'North',
-      assignedHours: 35,
-      maxHours: 40,
-      matchScore: 'fair',
-      rating: 4.6,
-      distance: '4.1 miles',
-      availability: 'Available',
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      photo: '/placeholder.svg',
-      specializations: ['CNA', 'Personal Care', 'Companionship'],
-      region: 'Central',
-      assignedHours: 38,
-      maxHours: 40,
-      matchScore: 'poor',
-      rating: 4.4,
-      distance: '6.8 miles',
-      availability: 'Limited',
-    },
-  ];
+/**
+ * Ranks active caregivers for a visit:
+ * 1. free at that time, 2. the patient's primary caregiver, 3. most hours left this week.
+ */
+const CaregiverSuggestionsModal: React.FC<CaregiverSuggestionsModalProps> = ({ isOpen, onClose, visit }) => {
+  const { data: caregivers = [] } = useCaregiverRows();
+  const { data: patients = [] } = usePatientRows();
+  const save = useSaveVisit();
 
-  const getMatchScoreColor = (score: string) => {
-    switch (score) {
-      case 'good':
-        return 'bg-green-100 text-green-800';
-      case 'fair':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'poor':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const weekFrom = visit ? startOfWeek(visit.start, { weekStartsOn: 1 }).toISOString() : '';
+  const weekTo = visit ? endOfWeek(visit.start, { weekStartsOn: 1 }).toISOString() : '';
+  const weekVisits = useVisitRows(weekFrom, weekTo);
+
+  const ranked = useMemo(() => {
+    if (!visit) return [];
+    const all = weekVisits.data ?? [];
+    const primaryId = patients.find((p) => p.id === visit.row.patient_id)?.primary_caregiver_id;
+
+    return caregivers
+      .filter((c) => c.status === 'active')
+      .map((c) => {
+        const conflicts = findConflicts(all, c.id, visit.start, visit.end, visit.row.id);
+        const hours =
+          all
+            .filter((v) => v.caregiver_id === c.id && isActiveVisit(v) && v.id !== visit.row.id)
+            .reduce((t, v) => t + (new Date(v.end_time).getTime() - new Date(v.start_time).getTime()) / 3_600_000, 0);
+        const max = Number(c.max_hours_per_week);
+        const hoursLeft = max - hours;
+        const fitsHours = hoursLeft >= visit.minutes / 60;
+        const isPrimary = c.id === primaryId;
+        const score = (conflicts.length === 0 ? 1000 : 0) + (isPrimary ? 100 : 0) + (fitsHours ? 50 : 0) + hoursLeft;
+        return { c, conflicts, hours: Math.round(hours * 10) / 10, max, fitsHours, isPrimary, score };
+      })
+      .sort((a, b) => b.score - a.score);
+  }, [visit, caregivers, patients, weekVisits.data]);
+
+  const assign = async (caregiverId: string, name: string) => {
+    if (!visit) return;
+    try {
+      await save.mutateAsync({ id: visit.row.id, input: { caregiver_id: caregiverId } });
+      toast.success(`Visit assigned to ${name}`);
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-  };
-
-  const getUtilizationColor = (percentage: number) => {
-    if (percentage < 75) return 'bg-green-500';
-    if (percentage < 95) return 'bg-yellow-500';
-    return 'bg-red-500';
   };
 
   if (!visit) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-primary" />
-            <span>AI-Powered Caregiver Suggestions</span>
-          </DialogTitle>
+          <DialogTitle>Choose a caregiver</DialogTitle>
         </DialogHeader>
-        
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="font-medium">{visit.patientName}</p>
-          <p className="text-sm text-gray-600">
-            {visit.serviceType} • {visit.startTime} • {visit.duration} minutes
-          </p>
+
+        <div className="bg-muted/50 rounded-lg p-3 text-sm">
+          <span className="font-medium">{visit.patientName}</span> · {formatDate(visit.start)}{' '}
+          {formatTime(visit.start)}-{formatTime(visit.end)}
+          {visit.row.tasks.length > 0 && <span className="text-muted-foreground"> · {visit.row.tasks.join(', ')}</span>}
         </div>
-        
-        <div className="space-y-4">
-          {suggestedCaregivers.map((caregiver) => {
-            const utilizationPercentage = (caregiver.assignedHours / caregiver.maxHours) * 100;
-            
-            return (
-              <div key={caregiver.id} className="border rounded-lg p-4">
-                <div className="flex items-start space-x-4">
-                  <img
-                    src={caregiver.photo}
-                    alt={caregiver.name}
-                    className="w-12 h-12 rounded-full"
-                  />
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold">{caregiver.name}</h4>
-                      <Badge className={getMatchScoreColor(caregiver.matchScore)}>
-                        {caregiver.matchScore} match
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {caregiver.specializations.map((spec) => (
-                        <Badge key={spec} variant="secondary" className="text-xs">
-                          {spec}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{caregiver.region} • {caregiver.distance}</span>
+
+        {weekVisits.isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Checking availability...
+          </div>
+        ) : ranked.length === 0 ? (
+          <p className="py-8 text-center text-muted-foreground">No active caregivers. Add one on the Caregivers page.</p>
+        ) : (
+          <div className="space-y-3">
+            {ranked.map(({ c, conflicts, hours, max, fitsHours, isPrimary }) => {
+              const free = conflicts.length === 0;
+              const pct = max > 0 ? Math.min(100, (hours / max) * 100) : 100;
+              return (
+                <div key={c.id} className={`border rounded-lg p-3 ${free ? '' : 'opacity-70'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                        {initials(c)}
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span>{caregiver.rating}</span>
+                      <div className="min-w-0">
+                        <div className="font-medium">{fullName(c)}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {isPrimary && (
+                            <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+                              <Star className="h-3 w-3 mr-1" />Primary caregiver
+                            </Badge>
+                          )}
+                          {free ? (
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />Free at this time
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+                              <XCircle className="h-3 w-3 mr-1" />Booked {formatTime(conflicts[0].start_time)}-{formatTime(conflicts[0].end_time)}
+                            </Badge>
+                          )}
+                          {!fitsHours && (
+                            <Badge variant="outline" className="text-orange-700">Over weekly hours</Badge>
+                          )}
+                          {c.specialty && <Badge variant="secondary">{c.specialty}</Badge>}
+                          {c.region && (
+                            <Badge variant="outline"><MapPin className="h-3 w-3 mr-1" />{c.region}</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="mb-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Workload: {caregiver.assignedHours}/{caregiver.maxHours} hours</span>
-                        <span>{Math.round(utilizationPercentage)}%</span>
-                      </div>
-                      <Progress 
-                        value={utilizationPercentage} 
-                        className="h-2"
-                        style={{
-                          background: `linear-gradient(to right, ${getUtilizationColor(utilizationPercentage)} 0%, ${getUtilizationColor(utilizationPercentage)} ${utilizationPercentage}%, #e5e7eb ${utilizationPercentage}%, #e5e7eb 100%)`
-                        }}
-                      />
-                    </div>
-                    
-                    <Button 
-                      onClick={() => onAssign(visit.id, caregiver.id, visit.startTime)}
-                      className="w-full"
-                      variant={caregiver.matchScore === 'good' ? 'default' : 'outline'}
+                    <Button
+                      size="sm"
+                      variant={free ? 'default' : 'outline'}
+                      disabled={save.isPending}
+                      onClick={() => assign(c.id, fullName(c))}
                     >
-                      Assign to Visit
+                      {free ? 'Assign' : 'Assign anyway'}
                     </Button>
                   </div>
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />This week</span>
+                      <span>{hours}/{max}h</span>
+                    </div>
+                    <Progress value={pct} className="h-1.5" />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        <div className="pt-4 border-t">
-          <Button variant="outline" className="w-full">
-            View All Caregivers
-          </Button>
-        </div>
+              );
+            })}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

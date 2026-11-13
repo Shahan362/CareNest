@@ -72,7 +72,6 @@ const CaregiverTable: React.FC<CaregiverTableProps> = ({
           <TableHeader>
             <TableRow>
               <TableHead className="text-left w-64">Name</TableHead>
-              <TableHead className="text-left w-32">Role</TableHead>
               <TableHead className="text-left w-32">Specialty</TableHead>
               <TableHead className="text-left w-24">Status</TableHead>
               <TableHead className="text-left w-20">Patients</TableHead>

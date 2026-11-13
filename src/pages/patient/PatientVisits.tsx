@@ -1,182 +1,121 @@
-
-import React, { useState } from 'react';
-import { Calendar, Filter, Search } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { addDays, format, startOfDay, subDays } from 'date-fns';
+import { ChevronRight } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
-import VisitCard from '@/components/ui/visit-card';
-import StatusBadge from '@/components/ui/status-badge';
+import { Button } from '@/components/ui/button';
+import NotLinkedNotice from '@/components/caregiver/NotLinkedNotice';
+import RequestFormDialog from '@/components/patient/RequestFormDialog';
+import PatientVisitDialog from '@/components/patient/PatientVisitDialog';
+import { EmptyState, ErrorState, LoadingState } from '@/components/admin/DataState';
+import { usePatientVisits, type PatientVisit } from '@/hooks/data/usePatientData';
+import { formatTime } from '@/lib/format';
+import { STATUS_LABEL, STATUS_STYLE } from '@/lib/visits';
+import { cn } from '@/lib/utils';
 
+type Tab = 'upcoming' | 'past';
+
+/** Upcoming visits (next 4 weeks) and past visits (last 8 weeks, more on request). */
 const PatientVisits: React.FC = () => {
-  // Mock data
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-  
-  const upcomingVisits = [
-    {
-      id: '1',
-      date: 'Today',
-      time: '9:00 AM',
-      duration: '1 hour',
-      status: 'scheduled' as const,
-      caregiverName: 'Jane Doe, RN',
-      tasks: ['Medication', 'Vitals', 'Exercises']
-    },
-    {
-      id: '2',
-      date: 'Friday, May 26',
-      time: '11:30 AM',
-      duration: '45 min',
-      status: 'scheduled' as const,
-      caregiverName: 'Mike Johnson, HHA',
-      tasks: ['Bathing', 'Meal Prep', 'Light Cleaning']
-    },
-  ];
-  
-  const pastVisits = [
-    {
-      id: '3',
-      date: 'Yesterday',
-      time: '2:00 PM',
-      duration: '1 hour',
-      status: 'completed' as const,
-      caregiverName: 'Jane Doe, RN',
-      tasks: ['Medication', 'Vitals', 'Physical Therapy']
-    },
-    {
-      id: '4',
-      date: 'May 21',
-      time: '10:30 AM',
-      duration: '45 min',
-      status: 'completed' as const,
-      caregiverName: 'Mike Johnson, HHA',
-      tasks: ['Meal Prep', 'Mobility Assistance']
-    },
-    {
-      id: '5',
-      date: 'May 19',
-      time: '3:00 PM',
-      duration: '1 hour',
-      status: 'completed' as const,
-      caregiverName: 'Sarah Williams, LPN',
-      tasks: ['Medication', 'Wound Care', 'Vitals']
-    },
-    {
-      id: '6',
-      date: 'May 17',
-      time: '9:00 AM',
-      duration: '1 hour',
-      status: 'cancelled' as const,
-      caregiverName: 'Jane Doe, RN',
-      tasks: ['Medication', 'Vitals', 'Exercises']
-    },
-  ];
+  const [tab, setTab] = useState<Tab>('upcoming');
+  const [pastWeeks, setPastWeeks] = useState(8);
+  const range = useMemo(() => {
+    const today = startOfDay(new Date());
+    return { from: subDays(today, pastWeeks * 7).toISOString(), to: addDays(today, 29).toISOString() };
+  }, [pastWeeks]);
+  const { data: visits, patient, isLoading, error, refetch, notLinked } = usePatientVisits(range.from, range.to);
+  const [details, setDetails] = useState<PatientVisit | null>(null);
+  const [requestVisit, setRequestVisit] = useState<string | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
 
-  const allVisits = [...upcomingVisits, ...pastVisits].sort((a, b) => {
-    // Simple sort - in a real app, would need proper date parsing
-    if (a.date === 'Today') return -1;
-    if (b.date === 'Today') return 1;
-    if (a.date === 'Tomorrow') return -1;
-    if (b.date === 'Tomorrow') return 1;
-    if (a.date === 'Yesterday') return 1;
-    if (b.date === 'Yesterday') return -1;
-    return 0;
-  });
-  
-  const filteredVisits = filter === 'all' ? allVisits :
-                         filter === 'upcoming' ? upcomingVisits : pastVisits;
+  const now = new Date();
+  const upcoming = visits.filter((v) => v.end > now && v.row.status !== 'completed' && v.row.status !== 'missed');
+  const past = visits.filter((v) => !upcoming.includes(v)).reverse();
+  const shown = tab === 'upcoming' ? upcoming : past;
+
+  // Group by day for easy reading.
+  const groups = useMemo(() => {
+    const map = new Map<string, PatientVisit[]>();
+    for (const v of shown) {
+      const key = format(v.start, 'yyyy-MM-dd');
+      map.set(key, [...(map.get(key) ?? []), v]);
+    }
+    return [...map.entries()];
+  }, [shown]);
 
   return (
-    <Layout title="Visit History" role="patient">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative flex-grow">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input 
-            type="text" 
-            placeholder="Search visits..." 
-            className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg"
-          />
-        </div>
-        <div className="flex gap-2">
-          <button 
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button 
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === 'upcoming' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
-            onClick={() => setFilter('upcoming')}
-          >
-            Upcoming
-          </button>
-          <button 
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === 'past' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
-            onClick={() => setFilter('past')}
-          >
-            Past
-          </button>
-        </div>
+    <Layout title="My Visits" role="patient">
+      <div className="flex gap-2 mb-4">
+        <Button variant={tab === 'upcoming' ? 'default' : 'outline'} onClick={() => setTab('upcoming')}>Upcoming</Button>
+        <Button variant={tab === 'past' ? 'default' : 'outline'} onClick={() => setTab('past')}>Past</Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-        <div className="space-y-6">
-          {filteredVisits.map(visit => (
-            <div key={visit.id} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-3">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center">
-                      <h3 className="font-medium">{visit.date} - {visit.time}</h3>
-                      <StatusBadge status={visit.status} className="ml-3" />
+      {notLinked ? (
+        <NotLinkedNotice who="patient" />
+      ) : error ? (
+        <div className="bg-white rounded-lg border"><ErrorState error={error} onRetry={refetch} /></div>
+      ) : isLoading ? (
+        <LoadingState />
+      ) : groups.length === 0 ? (
+        <div className="bg-white rounded-lg border">
+          <EmptyState title={tab === 'upcoming' ? 'No visits booked in the next 4 weeks' : `No visits in the last ${pastWeeks} weeks`} />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {groups.map(([key, dayVisits]) => (
+            <section key={key} className="bg-white rounded-lg border p-3 sm:p-4">
+              <h3 className="font-semibold mb-2">{format(dayVisits[0].start, 'EEEE d MMMM yyyy')}</h3>
+              <div className="space-y-2">
+                {dayVisits.map((v) => (
+                  <button
+                    key={v.row.id}
+                    type="button"
+                    onClick={() => setDetails(v)}
+                    className={cn(
+                      'w-full text-left flex items-center gap-3 rounded-lg border p-3 hover:bg-gray-50',
+                      v.row.status === 'cancelled' && 'opacity-60',
+                    )}
+                  >
+                    <div className="w-24 flex-shrink-0 font-medium">{formatTime(v.start)}-{formatTime(v.end)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{v.carer}</p>
+                      <p className="text-xs text-gray-500 truncate">{v.row.tasks.join(', ')}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{visit.duration} with {visit.caregiverName}</p>
-                  </div>
-                </div>
-                <div className="mt-3 md:mt-0">
-                  <button className="text-primary hover:underline text-sm font-medium">
-                    {visit.status === 'completed' ? 'View Details' : 'Manage Visit'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-2">Services</h4>
-                <div className="flex flex-wrap gap-1">
-                  {visit.tasks.map((task, i) => (
-                    <span key={i} className="text-xs bg-white border border-gray-200 rounded-full px-2 py-0.5">
-                      {task}
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap', STATUS_STYLE[v.row.status])}>
+                      {STATUS_LABEL[v.row.status]}
                     </span>
-                  ))}
-                </div>
-                {visit.status === 'completed' && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <h4 className="text-xs font-medium text-gray-500 mb-2">Notes</h4>
-                    <p className="text-sm text-gray-600">
-                      Patient was in good spirits. All medications administered on time. 
-                      Blood pressure reading slightly elevated but within acceptable parameters.
-                    </p>
-                  </div>
-                )}
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  </button>
+                ))}
               </div>
-            </div>
+            </section>
           ))}
-          
-          {filteredVisits.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Calendar className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">No visits found</h3>
-              <p className="text-gray-500 mt-2">
-                {filter === 'upcoming' ? 'You have no upcoming scheduled visits.' : 
-                 filter === 'past' ? 'No past visit records were found.' :
-                 'No visits match your search criteria.'}
-              </p>
-            </div>
-          )}
         </div>
-      </div>
+      )}
+
+      {tab === 'past' && !isLoading && !error && !notLinked && (
+        <div className="text-center mt-4">
+          <Button variant="outline" onClick={() => setPastWeeks((w) => w + 8)}>Show older visits</Button>
+        </div>
+      )}
+
+      <PatientVisitDialog
+        visit={details}
+        onOpenChange={(o) => !o && setDetails(null)}
+        onRequestChange={(v) => {
+          setDetails(null);
+          setRequestVisit(v.row.id);
+          setRequestOpen(true);
+        }}
+      />
+      {patient && (
+        <RequestFormDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          patientId={patient.id}
+          upcoming={upcoming.filter((v) => v.row.status === 'scheduled')}
+          initialVisitId={requestVisit}
+        />
+      )}
     </Layout>
   );
 };

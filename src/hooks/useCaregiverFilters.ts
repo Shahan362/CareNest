@@ -1,66 +1,48 @@
-
 import { useState } from 'react';
+import { addDays, format, startOfWeek } from 'date-fns';
 import { Caregiver } from '@/types/admin';
-import { startOfWeek } from 'date-fns';
 
 export const useCaregiverFilters = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [region, setRegion] = useState<string>('all');
-  const [role, setRole] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
-    start: new Date(),
-    end: new Date(new Date().setDate(new Date().getDate() + 6)),
-  });
   const [heatmapWeekStart, setHeatmapWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showOverbookedOnly, setShowOverbookedOnly] = useState(false);
 
   const filterCaregivers = (caregivers: Caregiver[], activeView: string) => {
-    return caregivers.filter(caregiver => {
-      const matchesSearch = caregiver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        caregiver.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        caregiver.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        caregiver.patientsList.some(patient => 
-          patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          patient.carePlan.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = searchTerm.trim().toLowerCase();
+    return caregivers.filter((caregiver) => {
+      const matchesSearch =
+        !term ||
+        caregiver.name.toLowerCase().includes(term) ||
+        caregiver.specialty.toLowerCase().includes(term) ||
+        caregiver.patientsList.some(
+          (patient) => patient.name.toLowerCase().includes(term) || patient.carePlan.toLowerCase().includes(term),
         );
-      
+
       const matchesRegion = region === 'all' || caregiver.region === region;
-      const matchesRole = role === 'all' || caregiver.role.includes(role);
-      
-      // For heatmap view, filter overbooked caregivers if toggle is on
+
+      // Heatmap: optionally show only caregivers booked at 91%+ in the selected week.
       if (activeView === 'heatmap' && showOverbookedOnly) {
-        const weeklyTotal = Object.values(caregiver.weeklyUtilization || {}).reduce(
-          (total, day) => total + day.hours, 0
-        );
-        const weeklyUtilizationPercent = caregiver.maxHours > 0 
-          ? (weeklyTotal / caregiver.maxHours) * 100 
-          : 0;
-        const isOverbooked = weeklyUtilizationPercent >= 91;
-        return matchesSearch && matchesRegion && matchesRole && isOverbooked;
+        const weeklyTotal = Array.from({ length: 7 }, (_, i) =>
+          format(addDays(heatmapWeekStart, i), 'yyyy-MM-dd'),
+        ).reduce((t, key) => t + (caregiver.weeklyUtilization[key]?.hours ?? 0), 0);
+        const pct = caregiver.maxHours > 0 ? (weeklyTotal / caregiver.maxHours) * 100 : 0;
+        return matchesSearch && matchesRegion && pct >= 91;
       }
-      
-      return matchesSearch && matchesRegion && matchesRole;
+
+      return matchesSearch && matchesRegion;
     });
   };
 
   return {
-    // State
     searchTerm,
     region,
-    role,
-    dateRange,
     heatmapWeekStart,
     showOverbookedOnly,
-    
-    // Setters
     setSearchTerm,
     setRegion,
-    setRole,
-    setDateRange,
     setHeatmapWeekStart,
     setShowOverbookedOnly,
-    
-    // Filter function
     filterCaregivers,
   };
 };

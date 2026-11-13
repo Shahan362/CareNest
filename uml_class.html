@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CareNest Class Diagram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F6F8F9;
+  --panel: #FFFFFF;
+  --boundary: #EDF2F4;
+  --fg: #16232B;
+  --muted: #5A6B75;
+  --line: #C9D4DA;
+  --edge: #4A5A64;
+  --account: #4A5A64;
+  --agency: #3346C8;
+  --caregiver: #0F8577;
+  --patient: #B85F14;
+  --billing: #7A4FD6;
+  --enum: #5A6B75;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10181D; --panel: #17222A; --boundary: #1C2A33; --fg: #E4ECEE; --muted: #9AABB4; --line: #33444F; --edge: #9AABB4;
+    --account: #B8C6CD; --agency: #8C9BFF; --caregiver: #4FD1C1; --patient: #F2A65A; --billing: #B3A1FF; --enum: #9AABB4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10181D; --panel: #17222A; --boundary: #1C2A33; --fg: #E4ECEE; --muted: #9AABB4; --line: #33444F; --edge: #9AABB4;
+  --account: #B8C6CD; --agency: #8C9BFF; --caregiver: #4FD1C1; --patient: #F2A65A; --billing: #B3A1FF; --enum: #9AABB4;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.5; }
+main { max-width: 1680px; margin: 0 auto; padding: 32px 16px 64px; }
+h1, h2 { font-family: var(--f-display); letter-spacing: -0.01em; margin: 0; }
+h1 { font-size: clamp(1.6rem, 3vw, 2.3rem); }
+h2 { font-size: 1.35rem; margin-bottom: 6px; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 70ch; margin-top: 6px; }
+section { margin-top: 36px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 14px 0 12px; font-size: 0.95rem; }
+.toolbar label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+.toolbar button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+.toolbar button:hover { border-color: var(--agency); }
+.hint { color: var(--muted); font-size: 0.9rem; }
+.frame { background: var(--boundary); border: 1px solid var(--line); border-radius: 14px; padding: 12px; overflow-x: auto; }
+.frame svg { display: block; min-width: 1100px; width: 100%; height: auto; }
+
+/* Diagram */
+.cls rect.body { fill: var(--panel); stroke-width: 1.5; }
+.cls rect.head { stroke: none; }
+.cls .sep { stroke-width: 1; }
+.cls text { fill: var(--fg); }
+.cls .name { font-family: var(--f-display); font-weight: 700; font-size: 16px; }
+.cls .stereo { font-family: var(--f-body); font-size: 11.5px; fill: var(--muted); }
+.cls .member { font-family: var(--f-mono); font-size: 12px; }
+.cls .member.planned-row { fill: var(--muted); font-style: italic; }
+.cls.planned rect.body { stroke-dasharray: 6 4; }
+.cls.planned .name { font-style: italic; }
+.edge path.line { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+.edge.dep path.line { stroke-dasharray: 6 4; }
+.edge text { font-family: var(--f-body); font-size: 11.5px; fill: var(--fg); paint-order: stroke; stroke: var(--boundary); stroke-width: 4px; stroke-linejoin: round; }
+.edge text.role { fill: var(--muted); font-style: italic; }
+marker path.filled { fill: var(--edge); stroke: var(--edge); }
+marker path.open { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+.cls, .edge { transition: opacity 0.15s; }
+svg.focus .cls:not(.hl), svg.focus .edge:not(.hl) { opacity: 0.18; }
+svg.focus .edge.hl path.line { stroke-width: 2.2; }
+.cls { cursor: default; }
+
+/* Legend and tables */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.card h3 { font-family: var(--f-display); font-size: 1.05rem; margin: 0 0 10px; }
+.legend { display: grid; gap: 10px; font-size: 0.92rem; }
+.legend div { display: flex; align-items: center; gap: 12px; }
+.legend svg { flex: 0 0 70px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.92rem; }
+.swatches span { display: inline-flex; align-items: center; gap: 6px; }
+.swatches i { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; display: inline-block; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+td code, p code, li code { font-family: var(--f-mono); font-size: 0.85em; }
+ul { margin: 0; padding-left: 20px; }
+li { margin: 4px 0; }
+
+@media print {
+  .toolbar { display: none; }
+  .frame { overflow: visible; border: 0; padding: 0; background: none; }
+  .frame svg { min-width: 0; }
+  section { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>CareNest: UML Class Diagram</h1>
+    <p class="lead">Built from the project's database scripts (<code>supabase/migrations/001-004</code>) and source code (<code>src/</code>). Hover over a class to highlight its relationships.</p>
+  </header>
+
+  <section>
+    <h2>1. Domain model</h2>
+    <p class="hint">The data CareNest stores and the rules attached to it. Attribute names are camelCase here; in the database they are snake_case (e.g. <code>hourlyRate</code> is the column <code>hourly_rate</code>).</p>
+    <div class="toolbar">
+      <label style="display:none"><input type="checkbox" id="togglePlanned" checked> Show planned features</label>
+      <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+    <div class="frame"><svg id="domain" role="img" aria-labelledby="domainTitle"><title id="domainTitle">CareNest domain class diagram</title></svg></div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Notation</h3>
+        <div class="legend">
+          <div><svg width="70" height="16" aria-hidden="true"><path d="M2 8 L14 2 L26 8 L14 14 Z" fill="var(--edge)"/><path d="M26 8 H68" stroke="var(--edge)" stroke-width="1.4"/></svg><span><b>Composition</b>: the part can't exist without the whole (deleting the whole deletes the parts).</span></div>
+          <div><svg width="70" height="16" aria-hidden="true"><path d="M2 8 H68" stroke="var(--edge)" stroke-width="1.4"/></svg><span><b>Association</b>: the two are linked, but each can exist on its own.</span></div>
+          <div><svg width="70" height="16" aria-hidden="true"><path d="M2 8 H66" stroke="var(--edge)" stroke-width="1.4" stroke-dasharray="6 4"/><path d="M58 2 L68 8 L58 14" fill="none" stroke="var(--edge)" stroke-width="1.4"/></svg><span><b>Dependency</b>: one uses the other (diagram 2).</span></div>
+          <div><span style="font-family:var(--f-mono);font-size:.85em;flex:0 0 70px">1 · 0..1 · 0..* · 1..*</span><span><b>Multiplicity</b>: exactly one, optional, any number, at least one.</span></div>
+          <div><span style="font-family:var(--f-mono);font-size:.85em;flex:0 0 70px">{PK} {FK}</span><span>Primary key, foreign key. <code>/amount</code> = calculated (derived) value.</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Colour groups</h3>
+        <div class="swatches">
+          <span><i style="border-color:var(--account)"></i>Accounts &amp; login</span>
+          <span><i style="border-color:var(--agency)"></i>Agency</span>
+          <span><i style="border-color:var(--caregiver)"></i>Caregivers &amp; visits</span>
+          <span><i style="border-color:var(--patient)"></i>Patients</span>
+          <span><i style="border-color:var(--billing)"></i>Billing</span>
+          <span><i style="border-color:var(--enum)"></i>Enumerations</span>
+        </div>
+        <p class="hint" style="margin-top:12px">Every table also has a <code>createdAt</code> timestamp (left out to keep the boxes readable). <code>Visit</code> and <code>Payment</code> also store <code>agencyId</code> so the database's security rules can check access quickly.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Relationships in words</h2>
+    <div class="card" style="margin-top:12px;overflow-x:auto">
+      <table id="relTable">
+        <thead><tr><th>From</th><th>Relationship</th><th>To</th><th>Multiplicity</th><th>What it means</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Application structure</h2>
+    <p class="hint">How the React code is organised. Pages show data; hooks load and save it through the Supabase client; the <code>lib/</code> files hold the business rules (clash checks, billing maths, UK formatting).</p>
+    <div class="frame" style="margin-top:12px"><svg id="app" role="img" aria-labelledby="appTitle"><title id="appTitle">CareNest application structure class diagram</title></svg></div>
+  </section>
+
+  <section>
+    <h2>Business rules shown as operations</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Scheduling</h3>
+        <ul>
+          <li><code>Visit.conflictsWith()</code>: a caregiver can't be booked for two overlapping visits (cancelled visits don't count). The app warns but allows "Save anyway".</li>
+          <li><code>Visit.isBillable()</code>: only <b>completed</b> visits can go on an invoice.</li>
+          <li><code>Caregiver.assignedHours(week)</code>: compared with <code>maxHoursPerWeek</code> to show workload.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Billing</h3>
+        <ul>
+          <li><code>InvoiceLine.unitPrice</code> copies the patient's hourly rate when invoiced, so later rate changes don't alter old invoices.</li>
+          <li>A visit can appear on at most one invoice line (<code>visitId {unique}</code>).</li>
+          <li><code>Invoice.displayStatus()</code> works out <i>Overdue</i> and <i>Part paid</i> from the due date and payments.</li>
+          <li><code>Invoice.void()</code> keeps the record and frees its visits to be billed again.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Accounts &amp; security</h3>
+        <ul>
+          <li>Signing up as a caregiver or patient requires a valid <code>Agency.code</code>.</li>
+          <li>If the admin already created a record with the same email, the new login is linked to it (<code>userId</code>) instead of creating a duplicate.</li>
+          <li>The <code>Profile.role</code> decides which pages a user can open, and the database only returns rows from the user's own agency.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ---------------------------------------------------------------
+// Tiny UML renderer: classes are data, boxes and lines are drawn from it.
+// ---------------------------------------------------------------
+const LH = 17, HEAD = 46, PAD = 12, EMPTY = 10;
+const NS = 'http://www.w3.org/2000/svg';
+
+// Attributes/operations: a string, or [string, true] when it is planned (future stage).
+const P = (s) => [s, true];
+
+const domainClasses = [
+  { id: 'UserAccount', stereo: '«external» Supabase Auth', group: 'account', x: 40, y: 40, w: 310,
+    attrs: ['id: UUID {PK}', 'email: String {unique}', 'encryptedPassword: String'],
+    ops: ['signUp(email, password, metadata)', 'signIn(email, password)', 'resetPassword(email)', 'updateEmail(newEmail)'] },
+  { id: 'Profile', stereo: '«entity»', group: 'account', x: 430, y: 40, w: 320,
+    attrs: ['id: UUID {PK, FK → UserAccount}', 'role: Role', 'agencyId: UUID {FK}', 'email: String', 'firstName: String [0..1]', 'lastName: String [0..1]',
+      'phone: String [0..1]', 'dateOfBirth: Date [0..1]', 'address: String [0..1]', 'postcode: String [0..1]'],
+    ops: ['displayName(): String'] },
+  { id: 'Agency', stereo: '«entity»', group: 'agency', x: 830, y: 40, w: 340,
+    attrs: ['id: UUID {PK}', 'name: String', 'registrationNumber: String [0..1]', 'cqcProviderId: String [0..1]', 'email: String [0..1]',
+      'phone: String [0..1]', 'address: String [0..1]', 'postcode: String [0..1]', 'code: String {unique, 8 chars}',
+      'defaultPaymentTerms: Integer = 14', 'defaultHourlyRate: Decimal (£)', 'bankAccountName: String [0..1]',
+      'bankSortCode: String [0..1]', 'bankAccountNumber: String [0..1]', 'invoiceFooter: String [0..1]'],
+    ops: ['generateAgencyCode(): String', 'regenerateAgencyCode(): String', 'agencyCodeExists(code): Boolean'] },
+  { id: 'InvoiceCounter', stereo: '«entity»', group: 'agency', x: 1250, y: 40, w: 310,
+    attrs: ['agencyId: UUID {PK, FK}', 'year: Integer {PK}', 'lastNumber: Integer'],
+    ops: ['nextNumber(): String  // INV-2026-0001'] },
+
+  { id: 'Caregiver', stereo: '«entity»', group: 'caregiver', x: 40, y: 520, w: 330,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'userId: UUID [0..1] {FK, unique}', 'firstName: String', 'lastName: String',
+      'email: String [0..1]', 'phone: String [0..1]', 'specialty: String [0..1]', 'region: String [0..1]',
+      'availability: Availability', 'maxHoursPerWeek: Decimal = 40', 'startDate: Date [0..1]', 'status: RecordStatus'],
+    ops: ['assignedHours(week): Decimal', 'isFreeAt(start, end): Boolean'] },
+  { id: 'Patient', stereo: '«entity»', group: 'patient', x: 530, y: 520, w: 340,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'userId: UUID [0..1] {FK, unique}', 'firstName: String', 'lastName: String',
+      'dateOfBirth: Date [0..1]', 'email: String [0..1]', 'phone: String [0..1]', 'address: String [0..1]', 'postcode: String [0..1]',
+      'carePlan: CarePlan', 'primaryCaregiverId: UUID [0..1] {FK}', 'hourlyRate: Decimal (£)', 'status: RecordStatus', 'notes: String [0..1]',
+      'emergencyContactName: String [0..1]', 'emergencyContactPhone: String [0..1]', 'emergencyContactRelation: String [0..1]', 'gpPractice: String [0..1]'],
+    ops: ['age(): Integer', 'nextVisit(): DateTime [0..1]', 'updateMyContacts(...)'] },
+  { id: 'Invoice', stereo: '«entity»', group: 'billing', x: 1050, y: 520, w: 330,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'patientId: UUID {FK}', 'number: String {unique per agency}', 'periodStart: Date [0..1]',
+      'periodEnd: Date [0..1]', 'issueDate: Date', 'dueDate: Date', 'status: InvoiceStatus', 'notes: String [0..1]'],
+    ops: ['/total(): Decimal', '/paid(): Decimal', '/balance(): Decimal', 'displayStatus(): String', 'void()'] },
+
+  { id: 'Visit', stereo: '«entity»', group: 'caregiver', x: 230, y: 980, w: 340,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'patientId: UUID {FK}', 'caregiverId: UUID [0..1] {FK}', 'startTime: DateTime',
+      'endTime: DateTime {> startTime}', 'status: VisitStatus', 'tasks: String [0..*]', 'notes: String [0..1]',
+      'checkedInAt: DateTime [0..1]', 'checkedOutAt: DateTime [0..1]', 'tasksDone: String [0..*]'],
+    ops: ['durationMinutes(): Integer', 'conflictsWith(other: Visit): Boolean', 'isBillable(): Boolean', 'isLate(): Boolean',
+      'checkIn()', 'checkOut(tasksDone, note, concern)', 'reportNoAccess(reason)'] },
+  { id: 'InvoiceLine', stereo: '«entity»', group: 'billing', x: 760, y: 980, w: 330,
+    attrs: ['id: UUID {PK}', 'invoiceId: UUID {FK}', 'visitId: UUID [0..1] {FK, unique}', 'description: String',
+      'quantity: Decimal {> 0}', 'unitPrice: Decimal (£)', '/amount: Decimal = quantity × unitPrice', 'sortOrder: Integer'],
+    ops: [] },
+  { id: 'Payment', stereo: '«entity»', group: 'billing', x: 1210, y: 980, w: 330,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'invoiceId: UUID {FK}', 'amount: Decimal {> 0}', 'paidOn: Date',
+      'method: PaymentMethod', 'reference: String [0..1]', 'notes: String [0..1]'],
+    ops: [] },
+
+  { id: 'CareNote', stereo: '«entity»', group: 'caregiver', x: 610, y: 1400, w: 330,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'patientId: UUID {FK}', 'visitId: UUID [0..1] {FK}', 'authorId: UUID [0..1] {FK → UserAccount}',
+      'authorName: String', 'body: String', 'isConcern: Boolean = false', 'resolvedAt: DateTime [0..1]', 'resolvedBy: UUID [0..1]',
+      'createdAt: DateTime'],
+    ops: ['resolve()  // admin only; no edit or delete'] },
+
+  // Enumerations (row)
+  ...[
+    ['Role', ['admin', 'caregiver', 'patient']],
+    ['CarePlan', ['basic', 'comprehensive', 'advanced']],
+    ['RecordStatus', ['active', 'inactive']],
+    ['Availability', ['full-time', 'part-time', 'contract']],
+    ['VisitStatus', ['scheduled', 'in_progress', 'completed', 'cancelled', 'missed']],
+    ['InvoiceStatus', ['draft', 'sent', 'paid', 'void']],
+    ['PaymentMethod', ['bank_transfer', 'card', 'cash', 'cheque', 'direct_debit', 'other']],
+  ].map(([id, values], i) => ({ id, stereo: '«enumeration»', group: 'enum', x: 40 + i * 216, y: 1720, w: 200, attrs: values, ops: null })),
+  ...[
+    ['RequestType', ['change_time', 'cancel_visit', 'extra_visit', 'change_caregiver', 'change_care', 'other']],
+    ['RequestStatus', ['pending', 'approved', 'declined', 'withdrawn']],
+    ['FeedbackKind', ['compliment', 'suggestion', 'complaint']],
+  ].map(([id, values], i) => ({ id, stereo: '«enumeration»', group: 'enum', x: 40 + i * 216, y: 1910, w: 200, attrs: values, ops: null })),
+
+  // Planned features (stage 7)
+  { id: 'CareRequest', stereo: '«entity»', group: 'patient', x: 980, y: 1250, w: 300,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'patientId: UUID {FK}', 'visitId: UUID [0..1] {FK}', 'type: RequestType',
+      'details: String', 'preferredDate: Date [0..1]', 'preferredTime: Time [0..1]', 'status: RequestStatus',
+      'adminResponse: String [0..1]', 'respondedAt: DateTime [0..1]', 'respondedBy: UUID [0..1]', 'createdBy: UUID [0..1]', 'createdAt: DateTime'],
+    ops: ['approve(response)', 'decline(response)', 'withdraw()  // patient, while pending'] },
+  { id: 'Feedback', stereo: '«entity»', group: 'patient', x: 40, y: 1400, w: 330,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'patientId: UUID {FK}', 'caregiverId: UUID [0..1] {FK}', 'kind: FeedbackKind',
+      'message: String', 'status: open | resolved', 'adminResponse: String [0..1]', 'respondedAt: DateTime [0..1]',
+      'respondedBy: UUID [0..1]', 'createdAt: DateTime'],
+    ops: ['resolve(response)  // reply required for complaints'] },
+  { id: 'Message', stereo: '«entity»', group: 'account', x: 40, y: 2110, w: 360,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID {FK}', 'threadUserId: UUID {FK → UserAccount}', 'senderId: UUID [0..1] {FK → UserAccount}',
+      'senderName: String', 'fromOffice: Boolean', 'body: String {1..4000 chars}', 'readAt: DateTime [0..1]', 'createdAt: DateTime'],
+    ops: ['send(body)', 'markThreadRead()', 'officeThreads()  // admin inbox'] },
+  { id: 'Notification', stereo: '«entity»', group: 'account', x: 40, y: 2420, w: 360,
+    attrs: ['id: UUID {PK}', 'agencyId: UUID [0..1] {FK}', 'userId: UUID {FK → UserAccount}', 'type: String', 'title: String',
+      'body: String [0..1]', 'link: String [0..1]', 'groupCount: Integer = 1', 'readAt: DateTime [0..1]', 'createdAt: DateTime'],
+    ops: ['markRead()', 'markAllRead()', '«created by DB triggers only»'] },
+];
+
+// kind: 'comp' (diamond at "from"), 'assoc', 'dep' (arrow at "to").
+// from/to: [classId, side, t] where t is 0..1 along that side.
+const domainEdges = [
+  { from: ['UserAccount', 'right', 0.3], to: ['Profile', 'left', 0.25], kind: 'comp', m: ['1', '1'], role: 'has profile' },
+  { from: ['Agency', 'left', 0.2], to: ['Profile', 'right', 0.25], kind: 'comp', m: ['1', '0..*'], role: 'members' },
+  { from: ['Agency', 'right', 0.15], to: ['InvoiceCounter', 'left', 0.4], kind: 'comp', m: ['1', '0..*'], role: 'numbers invoices' },
+  { from: ['Agency', 'bottom', 0.12], to: ['Caregiver', 'top', 0.55], kind: 'comp', m: ['1', '0..*'], role: 'employs', mid: 460 },
+  { from: ['Agency', 'bottom', 0.35], to: ['Patient', 'top', 0.7], kind: 'comp', m: ['1', '0..*'], role: 'cares for', mid: 485 },
+  { from: ['Agency', 'bottom', 0.75], to: ['Invoice', 'top', 0.25], kind: 'comp', m: ['1', '0..*'], role: 'issues', mid: 470 },
+  { from: ['UserAccount', 'bottom', 0.3], to: ['Caregiver', 'top', 0.3], kind: 'assoc', m: ['0..1', '0..1'], role: 'logs in as' },
+  { from: ['UserAccount', 'bottom', 0.8], to: ['Patient', 'top', 0.25], kind: 'assoc', m: ['0..1', '0..1'], role: 'logs in as', mid: 430 },
+  { from: ['Caregiver', 'right', 0.25], to: ['Patient', 'left', 0.4], kind: 'assoc', m: ['0..1', '0..*'], role: 'primary caregiver of' },
+  { from: ['Patient', 'right', 0.2], to: ['Invoice', 'left', 0.25], kind: 'assoc', m: ['1', '0..*'], role: 'billed' },
+  { from: ['Patient', 'bottom', 0.3], to: ['Visit', 'top', 0.75], kind: 'comp', m: ['1', '0..*'], role: 'receives', mid: 940 },
+  { from: ['Caregiver', 'bottom', 0.6], to: ['Visit', 'top', 0.25], kind: 'assoc', m: ['0..1', '0..*'], role: 'assigned to', mid: 955 },
+  { from: ['Invoice', 'bottom', 0.2], to: ['InvoiceLine', 'top', 0.75], kind: 'comp', m: ['1', '1..*'], role: 'contains', mid: 945 },
+  { from: ['Invoice', 'bottom', 0.75], to: ['Payment', 'top', 0.35], kind: 'comp', m: ['1', '0..*'], role: 'paid by', mid: 945 },
+  { from: ['InvoiceLine', 'left', 0.3], to: ['Visit', 'right', 0.3], kind: 'assoc', m: ['0..1', '0..1'], role: 'bills' },
+  { from: ['Patient', 'bottom', 0.5], to: ['CareNote', 'top', 90 / 330], kind: 'comp', m: ['1', '0..*'], role: 'care record' },
+  { from: ['Visit', 'bottom', 0.8], to: ['CareNote', 'left', 0.15], kind: 'assoc', m: ['0..1', '0..*'], role: 'documented by' },
+  { from: ['Patient', 'right', 0.89], to: ['CareRequest', 'top', 170 / 300], kind: 'comp', m: ['1', '0..*'], role: 'asks' },
+  { from: ['Visit', 'right', 0.814], to: ['CareRequest', 'left', 50 / 359], kind: 'assoc', m: ['0..1', '0..*'], role: 'about' },
+  { from: ['Patient', 'left', 0.9], to: ['Feedback', 'top', 160 / 330], kind: 'comp', m: ['1', '0..*'], role: 'gives', mid: 200 },
+  { from: ['Caregiver', 'bottom', 0.09], to: ['Feedback', 'top', 30 / 330], kind: 'assoc', m: ['0..1', '0..*'], role: 'about' },
+  { from: ['UserAccount', 'left', 0.35], to: ['Message', 'left', 0.2], kind: 'comp', m: ['1', '0..*'], role: '', mid: 14 },
+  { from: ['UserAccount', 'left', 0.7], to: ['Notification', 'left', 0.2], kind: 'comp', m: ['1', '0..*'], role: '', mid: 26 },
+];
+
+const relMeaning = {
+  'UserAccount-Profile': 'Every login has exactly one profile holding its role and agency.',
+  'Agency-Profile': 'Each user account belongs to one agency.',
+  'Agency-InvoiceCounter': 'One counter per agency per year produces invoice numbers.',
+  'Agency-Caregiver': 'Caregiver records belong to one agency; deleting the agency deletes them.',
+  'Agency-Patient': 'Patient records belong to one agency.',
+  'Agency-Invoice': 'Invoices belong to one agency.',
+  'UserAccount-Caregiver': 'A caregiver may have a login (set when they sign up with the agency code).',
+  'UserAccount-Patient': 'A patient may have a login; elderly patients can exist without one.',
+  'Caregiver-Patient': 'A patient can have one primary caregiver, who is suggested first when scheduling.',
+  'Patient-Invoice': 'Invoices are addressed to one patient; a patient with invoices cannot be deleted.',
+  'Patient-Visit': 'Deleting a patient deletes their visits.',
+  'Caregiver-Visit': 'A visit is unassigned until a caregiver is set; deleting a caregiver unassigns their visits.',
+  'Invoice-InvoiceLine': 'An invoice has at least one line.',
+  'Invoice-Payment': 'Payments (including part payments) are recorded against one invoice.',
+  'InvoiceLine-Visit': 'A line can bill one completed visit, and a visit can be billed at most once.',
+  'Patient-CareNote': 'The patient\'s care record. Deleting a patient deletes their notes; caregivers can add notes but never edit or delete them.',
+  'Patient-CareRequest': 'Requests from the patient or family to the office (change, cancel or add visits, change carer or care). The office approves or declines with a reply.',
+  'Visit-CareRequest': 'A change or cancellation request points at the visit it is about.',
+  'Patient-Feedback': 'Compliments, suggestions and complaints. Complaints must be answered (CQC).',
+  'Caregiver-Feedback': 'Feedback can be about a particular carer.',
+  'UserAccount-Message': 'Each caregiver / patient has one conversation with the office (thread). All admins share the office side; messages are never deleted.',
+  'UserAccount-Notification': 'Notifications belong to one user and are created by database triggers when visits, requests, feedback, concerns, invoices or messages change.',
+  'Visit-CareNote': 'The check-out note (and any later notes) belong to the visit; a note stays if the visit is deleted.',
+};
+
+// ---------- Application structure ----------
+const appClasses = [
+  { id: 'ProtectedRoute', stereo: '«component» auth/ProtectedRoute', group: 'account', x: 40, y: 30, w: 300,
+    attrs: ['role: Role'], ops: ['render(): Outlet | Redirect'] },
+  { id: 'AdminPages', stereo: '«pages» pages/admin/*', group: 'agency', x: 400, y: 30, w: 330,
+    attrs: ['AdminDashboard', 'AdminPatients', 'AdminCaregivers', 'AdminScheduler', 'AdminCalendar', 'AdminBilling',
+      'AdminInvoiceDetails', 'AdminReports', 'AdminSettings'], ops: null },
+  { id: 'SharedDialogs', stereo: '«components» components/admin/*', group: 'agency', x: 800, y: 30, w: 330,
+    attrs: ['VisitFormDialog', 'VisitDetailsDialog', 'PatientFormDialog', 'CaregiverFormDialog', 'CaregiverSuggestionsModal',
+      'CreateInvoiceDialog', 'RecordPaymentDialog'], ops: null },
+  { id: 'Format', stereo: '«module» lib/format.ts', group: 'enum', x: 1200, y: 30, w: 360,
+    attrs: [], ops: ['formatGBP(amount): String', 'formatDate(d): String  // DD/MM/YYYY', 'ageFromDob(dob): Integer'] },
+  { id: 'VisitRules', stereo: '«module» lib/visits.ts', group: 'caregiver', x: 1200, y: 190, w: 360,
+    attrs: [], ops: ['findConflicts(visits, caregiver, start, end)', 'repeatStarts(first, rule, weeks)', 'durationMinutes(visit): Integer', 'combineDateTime(date, time)'] },
+  { id: 'BillingRules', stereo: '«module» lib/billing.ts', group: 'billing', x: 1200, y: 380, w: 360,
+    attrs: [], ops: ['displayStatus(invoice): String', 'visitHours(minutes): Decimal', 'roundMoney(n): Decimal'] },
+  { id: 'AuthProvider', stereo: '«context» contexts/AuthContext', group: 'account', x: 40, y: 330, w: 300,
+    attrs: ['session: Session [0..1]', 'user: User [0..1]', 'profile: Profile [0..1]', 'loading: Boolean'],
+    ops: ['signOut()', 'refreshProfile(): Profile'] },
+  { id: 'AdminViews', stereo: '«hooks» hooks/useAdminViews.ts', group: 'agency', x: 400, y: 330, w: 330,
+    attrs: [], ops: ['useAdminPatients(): PatientView[]', 'useAdminCaregivers(): CaregiverView[]', 'useAdminVisits(from, to): VisitView[]'] },
+  { id: 'AgencyData', stereo: '«hooks» hooks/data/useAgencyData.ts', group: 'caregiver', x: 400, y: 560, w: 330,
+    attrs: [], ops: ['usePatientRows() / useSavePatient()', 'useCaregiverRows() / useSaveCaregiver()', 'useVisitRows(from, to)',
+      'useUpcomingVisits()', 'useUnassignedVisits()', 'useCaregiverVisits(id, from, to)', 'useCreateVisits(visits[])', 'useSaveVisit() / useDeleteVisit()'] },
+  { id: 'BillingData', stereo: '«hooks» hooks/data/useBilling.ts', group: 'billing', x: 800, y: 560, w: 330,
+    attrs: [], ops: ['useInvoices() / useInvoice(id)', 'createInvoice(invoice): UUID', 'useVoidInvoice() / useDeleteInvoice()',
+      'useRecordPayment() / usePayments()', 'fetchUnbilledVisits(ids, from, to)', 'useAgency() / useSaveAgency()', 'useRegenerateAgencyCode()'] },
+  { id: 'SupabaseClient', stereo: '«library» lib/supabase.ts → Supabase (Postgres + Auth)', group: 'enum', x: 400, y: 880, w: 730,
+    attrs: ['url: String  // VITE_SUPABASE_URL', 'publishableKey: String  // VITE_SUPABASE_PUBLISHABLE_KEY'],
+    ops: ['from(table).select / insert / update / delete', 'rpc(fn, args)  // create_invoice, void_invoice, regenerate_agency_code ...', 'auth.signUp / signInWithPassword / signOut / updateUser'] },
+];
+
+const appEdges = [
+  { from: ['ProtectedRoute', 'right', 0.5], to: ['AdminPages', 'left', 0.3], kind: 'dep', role: '«guards»' },
+  { from: ['ProtectedRoute', 'bottom', 0.5], to: ['AuthProvider', 'top', 0.5], kind: 'dep', role: '«reads role»' },
+  { from: ['AdminPages', 'right', 0.2], to: ['SharedDialogs', 'left', 0.2], kind: 'dep', role: '«opens»' },
+  { from: ['AdminPages', 'bottom', 0.5], to: ['AdminViews', 'top', 0.5], kind: 'dep', role: '«reads»' },
+  { from: ['SharedDialogs', 'right', 0.15], to: ['Format', 'left', 0.5], kind: 'dep', role: '' },
+  { from: ['SharedDialogs', 'right', 0.55], to: ['VisitRules', 'left', 0.5], kind: 'dep', role: '' },
+  { from: ['SharedDialogs', 'bottom', 0.15], to: ['AgencyData', 'top', 0.85], kind: 'dep', role: '«saves»', mid: 520 },
+  { from: ['SharedDialogs', 'bottom', 0.5], to: ['BillingData', 'top', 0.5], kind: 'dep', role: '«saves»' },
+  { from: ['AdminViews', 'bottom', 0.5], to: ['AgencyData', 'top', 0.5], kind: 'dep', role: '' },
+  { from: ['BillingData', 'right', 0.3], to: ['BillingRules', 'left', 0.5], kind: 'dep', role: '' },
+  { from: ['AgencyData', 'left', 0.2], to: ['AuthProvider', 'bottom', 0.8], kind: 'dep', role: '«agencyId»' },
+  { from: ['AuthProvider', 'bottom', 0.4], to: ['SupabaseClient', 'left', 0.4], kind: 'dep', role: '«auth»' },
+  { from: ['AgencyData', 'bottom', 0.5], to: ['SupabaseClient', 'top', 0.226], kind: 'dep', role: '' },
+  { from: ['BillingData', 'bottom', 0.5], to: ['SupabaseClient', 'top', 0.774], kind: 'dep', role: '' },
+];
+
+// ---------- Rendering ----------
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+
+function visibleRows(rows, showPlanned) {
+  return (rows ?? []).filter((r) => showPlanned || !Array.isArray(r));
+}
+
+function boxHeight(c, showPlanned) {
+  const a = visibleRows(c.attrs, showPlanned).length;
+  const o = c.ops === null ? null : visibleRows(c.ops, showPlanned).length;
+  let h = HEAD + (a ? a * LH + PAD : EMPTY);
+  if (o !== null) h += o ? o * LH + PAD : EMPTY;
+  return h;
+}
+
+function anchor(c, side, t) {
+  if (side === 'left') return [c.x, c.y + t * c.h];
+  if (side === 'right') return [c.x + c.w, c.y + t * c.h];
+  if (side === 'top') return [c.x + t * c.w, c.y];
+  return [c.x + t * c.w, c.y + c.h];
+}
+
+function route(a, sa, b, sb, mid) {
+  const horiz = (s) => s === 'left' || s === 'right';
+  const [x1, y1] = a, [x2, y2] = b;
+  if (horiz(sa) && horiz(sb)) {
+    const mx = mid ?? (x1 + x2) / 2;
+    return [[x1, y1], [mx, y1], [mx, y2], [x2, y2]];
+  }
+  if (!horiz(sa) && !horiz(sb)) {
+    const my = mid ?? (y1 + y2) / 2;
+    return [[x1, y1], [x1, my], [x2, my], [x2, y2]];
+  }
+  return horiz(sa) ? [[x1, y1], [x2, y1], [x2, y2]] : [[x1, y1], [x1, y2], [x2, y2]];
+}
+
+function addMarkers(svg, prefix) {
+  const defs = el('defs', {}, svg);
+  const d = el('marker', { id: `${prefix}-diamond`, viewBox: '0 0 14 10', refX: 14, refY: 5, markerWidth: 14, markerHeight: 10,
+    markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 5 L7 0 L14 5 L7 10 Z', class: 'filled' }, d);
+  const a = el('marker', { id: `${prefix}-arrow`, viewBox: '0 0 12 12', refX: 11, refY: 6, markerWidth: 12, markerHeight: 12,
+    markerUnits: 'userSpaceOnUse', orient: 'auto' }, defs);
+  el('path', { d: 'M1 1 L11 6 L1 11', class: 'open' }, a);
+}
+
+function drawClass(svg, c, showPlanned) {
+  const g = el('g', { class: `cls${c.planned ? ' planned' : ''}`, 'data-id': c.id, tabindex: 0 }, svg);
+  const color = `var(--${c.group})`;
+  el('rect', { class: 'body', x: c.x, y: c.y, width: c.w, height: c.h, rx: 7, stroke: color }, g);
+  const head = el('rect', { class: 'head', x: c.x + 1, y: c.y + 1, width: c.w - 2, height: HEAD - 2, rx: 6 }, g);
+  head.style.fill = `color-mix(in srgb, ${color} 14%, var(--panel))`;
+  const cx = c.x + c.w / 2;
+  el('text', { class: 'stereo', x: cx, y: c.y + 17, 'text-anchor': 'middle' }, g).textContent = c.stereo;
+  el('text', { class: 'name', x: cx, y: c.y + 36, 'text-anchor': 'middle' }, g).textContent = c.id;
+
+  let y = c.y + HEAD;
+  const section = (rows) => {
+    el('line', { class: 'sep', x1: c.x, x2: c.x + c.w, y1: y, y2: y, stroke: color }, g);
+    const vis = visibleRows(rows, showPlanned);
+    if (!vis.length) { y += EMPTY; return; }
+    y += PAD / 2;
+    for (const r of vis) {
+      const planned = Array.isArray(r);
+      const t = el('text', { class: `member${planned ? ' planned-row' : ''}`, x: c.x + 10, y: y + 13 }, g);
+      t.textContent = planned ? `${r[0]}  «planned»` : r;
+      y += LH;
+    }
+    y += PAD / 2;
+  };
+  section(c.attrs);
+  if (c.ops !== null) section(c.ops);
+  return g;
+}
+
+function labelAt(p0, p1, dist, offset) {
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1];
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  return [p0[0] + ux * dist - uy * offset, p0[1] + uy * dist + ux * offset];
+}
+
+function drawEdge(svg, e, byId, prefix) {
+  const A = byId[e.from[0]], B = byId[e.to[0]];
+  if (!A || !B) return null;
+  const pts = route(anchor(A, e.from[1], e.from[2]), e.from[1], anchor(B, e.to[1], e.to[2]), e.to[1], e.mid);
+  const g = el('g', { class: `edge ${e.kind}`, 'data-from': e.from[0], 'data-to': e.to[0] }, svg);
+  const p = el('path', { class: 'line', d: 'M' + pts.map((q) => q.join(' ')).join(' L') }, g);
+  if (e.kind === 'comp') p.setAttribute('marker-start', `url(#${prefix}-diamond)`);
+  if (e.kind === 'dep') p.setAttribute('marker-end', `url(#${prefix}-arrow)`);
+
+  if (e.m) {
+    const n = pts.length;
+    const [sx, sy] = labelAt(pts[0], pts[1], e.kind === 'comp' ? 26 : 14, -10);
+    el('text', { x: sx, y: sy + 4, 'text-anchor': 'middle' }, g).textContent = e.m[0];
+    const [tx, ty] = labelAt(pts[n - 1], pts[n - 2], 14, 10);
+    el('text', { x: tx, y: ty + 4, 'text-anchor': 'middle' }, g).textContent = e.m[1];
+  }
+  if (e.role) {
+    // Put the role name on the longest segment.
+    let best = 0, bl = -1;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+      if (l > bl) { bl = l; best = i; }
+    }
+    const [a, b] = [pts[best], pts[best + 1]];
+    const vertical = a[0] === b[0];
+    el('text', { class: 'role', x: (a[0] + b[0]) / 2 + (vertical ? 6 : 0), y: (a[1] + b[1]) / 2 + (vertical ? 4 : -6),
+      'text-anchor': vertical ? 'start' : 'middle' }, g).textContent = e.role;
+  }
+  return g;
+}
+
+function render(svgId, classes, edges, prefix, showPlanned, width) {
+  const svg = document.getElementById(svgId);
+  [...svg.querySelectorAll(':scope > :not(title)')].forEach((n) => n.remove());
+  addMarkers(svg, prefix);
+
+  const shown = classes.filter((c) => showPlanned || !c.planned);
+  const byId = {};
+  // Heights first, then push lower rows down if a row above grew (planned rows add lines to Visit).
+  shown.forEach((c) => { c.h = boxHeight(c, showPlanned); c._y0 = c._y0 ?? c.y; c.y = c._y0; byId[c.id] = c; });
+
+  const edgeLayer = el('g', {}, svg);
+  const classLayer = el('g', {}, svg);
+  edges.forEach((e) => {
+    const g = drawEdge(edgeLayer, e, byId, prefix);
+    if (g) edgeLayer.appendChild(g);
+  });
+  shown.forEach((c) => drawClass(classLayer, c, showPlanned));
+
+  const bottom = Math.max(...shown.map((c) => c.y + c.h)) + 30;
+  svg.setAttribute('viewBox', `0 0 ${width} ${bottom}`);
+
+  // Hover / focus highlight
+  classLayer.querySelectorAll('.cls').forEach((g) => {
+    const id = g.dataset.id;
+    const on = () => {
+      svg.classList.add('focus');
+      g.classList.add('hl');
+      svg.querySelectorAll('.edge').forEach((eg) => {
+        if (eg.dataset.from === id || eg.dataset.to === id) {
+          eg.classList.add('hl');
+          const other = eg.dataset.from === id ? eg.dataset.to : eg.dataset.from;
+          svg.querySelector(`.cls[data-id="${other}"]`)?.classList.add('hl');
+        }
+      });
+    };
+    const off = () => { svg.classList.remove('focus'); svg.querySelectorAll('.hl').forEach((n) => n.classList.remove('hl')); };
+    g.addEventListener('mouseenter', on);
+    g.addEventListener('mouseleave', off);
+    g.addEventListener('focus', on);
+    g.addEventListener('blur', off);
+  });
+}
+
+function fillTable() {
+  const kindLabel = { comp: 'composition', assoc: 'association' };
+  const tbody = document.querySelector('#relTable tbody');
+  tbody.innerHTML = domainEdges.map((e) => `
+    <tr><td><b>${e.from[0]}</b></td><td>${kindLabel[e.kind]}: <i>${e.role}</i></td><td><b>${e.to[0]}</b></td>
+    <td><code>${e.m[0]} → ${e.m[1]}</code></td><td>${relMeaning[`${e.from[0]}-${e.to[0]}`] ?? ''}</td></tr>`).join('');
+}
+
+const toggle = document.getElementById('togglePlanned');
+let showPlanned = true;
+try { showPlanned = localStorage.getItem('uml-show-planned') !== 'false'; } catch (_) {}
+toggle.checked = showPlanned;
+toggle.addEventListener('change', () => {
+  showPlanned = toggle.checked;
+  try { localStorage.setItem('uml-show-planned', String(showPlanned)); } catch (_) {}
+  render('domain', domainClasses, domainEdges, 'd', showPlanned, 1580);
+});
+
+render('domain', domainClasses, domainEdges, 'd', showPlanned, 1580);
+render('app', appClasses, appEdges, 'a', false, 1580);
+fillTable();
+</script>
+</body>
+</html>

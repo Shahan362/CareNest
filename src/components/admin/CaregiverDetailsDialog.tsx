@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { User, Clock, MapPin, Award, Activity, Users } from 'lucide-react';
+import { User, Clock, MapPin, Award, Activity, Users, Phone, Mail, KeyRound } from 'lucide-react';
 import { Caregiver } from '@/types/admin';
 
 interface CaregiverDetailsDialogProps {
@@ -35,10 +35,35 @@ const CaregiverDetailsDialog: React.FC<CaregiverDetailsDialogProps> = ({
               <span className="text-lg font-semibold">{caregiver.photo}</span>
             </div>
             <h3 className="text-xl font-semibold">{caregiver.name}</h3>
-            <p className="text-gray-600">{caregiver.role}</p>
+            <p className="text-gray-600">{caregiver.specialty}</p>
           </div>
 
           <div className="grid gap-4">
+            {caregiver.phone && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Phone className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Phone</p>
+                  <p className="text-gray-900">{caregiver.phone}</p>
+                </div>
+              </div>
+            )}
+            {caregiver.email && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Mail className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Email</p>
+                  <p className="text-gray-900">{caregiver.email}</p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <KeyRound className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">App Account</p>
+                <p className="text-gray-900">{caregiver.hasAccount ? 'Signed up' : 'No account yet'}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <Award className="h-5 w-5 text-primary" />
               <div>
@@ -86,7 +111,7 @@ const CaregiverDetailsDialog: React.FC<CaregiverDetailsDialogProps> = ({
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <Activity className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-medium text-gray-700">Workload</p>
+                <p className="text-sm font-medium text-gray-700">Workload this week</p>
                 <p className="text-gray-900">{caregiver.assignedHours}h / {caregiver.maxHours}h ({Math.round(workloadPercentage)}%)</p>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                   <div 

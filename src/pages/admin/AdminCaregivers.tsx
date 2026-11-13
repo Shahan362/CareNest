@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
+import { Plus } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
-import AddCaregiverDialog from '@/components/admin/AddCaregiverDialog';
-import EditCaregiverDialog from '@/components/admin/EditCaregiverDialog';
+import CaregiverFormDialog from '@/components/admin/CaregiverFormDialog';
 import CaregiverDetailsDialog from '@/components/admin/CaregiverDetailsDialog';
 import PatientDetailsDialog from '@/components/admin/PatientDetailsDialog';
 import CaregiverTable from '@/components/admin/CaregiverTable';
@@ -14,145 +13,115 @@ import WorkloadInsights from '@/components/admin/WorkloadInsights';
 import CaregiverUtilizationHeatmap from '@/components/admin/CaregiverUtilizationHeatmap';
 import HeatmapFilters from '@/components/admin/HeatmapFilters';
 import CaregiverTabsHeader from '@/components/admin/CaregiverTabsHeader';
+import { EmptyState, ErrorState, LoadingState } from '@/components/admin/DataState';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { useCaregivers } from '@/hooks/useCaregivers';
+import { useAdminCaregivers } from '@/hooks/useAdminViews';
+import { usePatientRows } from '@/hooks/data/useAgencyData';
 import { useCaregiverManagement } from '@/hooks/useCaregiverManagement';
 import { useCaregiverFilters } from '@/hooks/useCaregiverFilters';
 
+type View = 'list' | 'workload' | 'heatmap';
+
 const AdminCaregivers: React.FC = () => {
-  const [activeView, setActiveView] = useState<'list' | 'workload' | 'heatmap'>('list');
-  
-  const { caregivers, handleUpdateCaregiver, handleAddCaregiver, regions, roles } = useCaregivers();
-  
-  const {
-    isAddCaregiverOpen,
-    isEditCaregiverOpen,
-    isDetailsCaregiverOpen,
-    isPatientDetailsOpen,
-    selectedCaregiver,
-    selectedPatient,
-    setIsAddCaregiverOpen,
-    setIsEditCaregiverOpen,
-    setIsDetailsCaregiverOpen,
-    setIsPatientDetailsOpen,
-    handleCaregiverClick,
-    handleEditCaregiver,
-    handlePatientClick,
-  } = useCaregiverManagement(caregivers);
+  const [activeView, setActiveView] = useState<View>('list');
+  const { caregivers, regions, isLoading, error, refetch } = useAdminCaregivers();
+  const { data: patients = [] } = usePatientRows();
 
-  const {
-    searchTerm,
-    region,
-    role,
-    dateRange,
-    heatmapWeekStart,
-    showOverbookedOnly,
-    setSearchTerm,
-    setRegion,
-    setRole,
-    setDateRange,
-    setHeatmapWeekStart,
-    setShowOverbookedOnly,
-    filterCaregivers,
-  } = useCaregiverFilters();
+  const m = useCaregiverManagement(caregivers, patients);
+  const f = useCaregiverFilters();
 
-  const handleRefreshData = () => {
-    console.log('Refreshing workload data...');
+  const filteredCaregivers = f.filterCaregivers(caregivers.map((c) => c.view), activeView);
+  const activeCaregivers = filteredCaregivers.filter((c) => c.status === 'Active');
+  const hasOverloadedStaff = activeCaregivers.some((c) => c.maxHours > 0 && c.assignedHours / c.maxHours >= 0.95);
+  const hasUnderutilizedStaff = activeCaregivers.some((c) => c.maxHours > 0 && c.assignedHours / c.maxHours < 0.6);
+
+  const content = (children: React.ReactNode) => {
+    if (isLoading) return <div className="bg-white rounded-lg border p-4"><LoadingState label="Loading caregivers..." /></div>;
+    if (error) return <div className="bg-white rounded-lg border p-4"><ErrorState error={error} onRetry={refetch} /></div>;
+    if (caregivers.length === 0) {
+      return (
+        <div className="bg-white rounded-lg border p-4">
+          <EmptyState
+            title="No caregivers yet"
+            description="Add your first caregiver, or share your agency code so caregivers can sign up themselves."
+            action={<Button onClick={m.handleAddCaregiver}><Plus className="h-4 w-4 mr-2" />Add Caregiver</Button>}
+          />
+        </div>
+      );
+    }
+    return children;
   };
-
-  const filteredCaregivers = filterCaregivers(caregivers, activeView);
-  const activeCaregivers = filteredCaregivers.filter(c => c.status === 'Active');
-  const hasOverloadedStaff = activeCaregivers.some(c => 
-    c.maxHours > 0 && (c.assignedHours / c.maxHours) >= 0.95
-  );
-  const hasUnderutilizedStaff = activeCaregivers.some(c => 
-    c.maxHours > 0 && (c.assignedHours / c.maxHours) < 0.6
-  );
 
   return (
     <Layout title="Caregivers" role="admin">
-      <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'list' | 'workload' | 'heatmap')} className="w-full">
+      <Tabs value={activeView} onValueChange={(value) => setActiveView(value as View)} className="w-full">
         <CaregiverTabsHeader
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onAddCaregiver={() => setIsAddCaregiverOpen(true)}
+          searchTerm={f.searchTerm}
+          onSearchChange={f.setSearchTerm}
+          onAddCaregiver={m.handleAddCaregiver}
         />
 
         <TabsContent value="list">
-          <CaregiverTable
-            caregivers={filteredCaregivers}
-            onCaregiverClick={handleCaregiverClick}
-            onEditCaregiver={handleEditCaregiver}
-            onPatientClick={handlePatientClick}
-          />
+          {content(
+            filteredCaregivers.length === 0 ? (
+              <div className="bg-white rounded-lg border p-4"><EmptyState title="No caregivers match your search" /></div>
+            ) : (
+              <CaregiverTable
+                caregivers={filteredCaregivers}
+                onCaregiverClick={m.handleCaregiverClick}
+                onEditCaregiver={m.handleEditCaregiver}
+                onPatientClick={m.handlePatientClick}
+              />
+            ),
+          )}
         </TabsContent>
 
         <TabsContent value="workload" className="space-y-6">
-          <WorkloadSummaryStats caregivers={filteredCaregivers} />
-          
-          <WorkloadActions 
-            onRefresh={handleRefreshData}
-            hasOverloadedStaff={hasOverloadedStaff}
-            hasUnderutilizedStaff={hasUnderutilizedStaff}
-          />
-          
-          <WorkloadInsights caregivers={filteredCaregivers} />
-          
-          <CaregiverFilters
-            region={region}
-            role={role}
-            dateRange={dateRange}
-            regions={regions}
-            roles={roles}
-            onRegionChange={setRegion}
-            onRoleChange={setRole}
-            onDateRangeChange={setDateRange}
-          />
-          
-          <CaregiverWorkloadView caregivers={filteredCaregivers} />
+          {content(
+            <>
+              <WorkloadSummaryStats caregivers={filteredCaregivers} />
+              <WorkloadActions
+                caregivers={filteredCaregivers}
+                onRefresh={refetch}
+                hasOverloadedStaff={hasOverloadedStaff}
+                hasUnderutilizedStaff={hasUnderutilizedStaff}
+              />
+              <WorkloadInsights caregivers={filteredCaregivers} />
+              <CaregiverFilters region={f.region} regions={regions} onRegionChange={f.setRegion} />
+              <CaregiverWorkloadView caregivers={filteredCaregivers} />
+            </>,
+          )}
         </TabsContent>
 
         <TabsContent value="heatmap" className="space-y-6">
-          <HeatmapFilters
-            weekStartDate={heatmapWeekStart}
-            region={region}
-            role={role}
-            showOverbookedOnly={showOverbookedOnly}
-            regions={regions}
-            roles={roles}
-            onWeekChange={setHeatmapWeekStart}
-            onRegionChange={setRegion}
-            onRoleChange={setRole}
-            onShowOverbookedToggle={setShowOverbookedOnly}
-          />
-          
-          <CaregiverUtilizationHeatmap
-            caregivers={filteredCaregivers}
-            weekStartDate={heatmapWeekStart}
-          />
+          {content(
+            <>
+              <HeatmapFilters
+                weekStartDate={f.heatmapWeekStart}
+                region={f.region}
+                showOverbookedOnly={f.showOverbookedOnly}
+                regions={regions}
+                onWeekChange={f.setHeatmapWeekStart}
+                onRegionChange={f.setRegion}
+                onShowOverbookedToggle={f.setShowOverbookedOnly}
+              />
+              <CaregiverUtilizationHeatmap caregivers={filteredCaregivers} weekStartDate={f.heatmapWeekStart} />
+            </>,
+          )}
         </TabsContent>
       </Tabs>
 
-      <AddCaregiverDialog 
-        open={isAddCaregiverOpen} 
-        onOpenChange={setIsAddCaregiverOpen}
-        onAdd={handleAddCaregiver}
+      <CaregiverFormDialog open={m.isFormOpen} onOpenChange={m.setIsFormOpen} caregiver={m.editingCaregiver} />
+      <CaregiverDetailsDialog
+        open={m.isDetailsCaregiverOpen}
+        onOpenChange={m.setIsDetailsCaregiverOpen}
+        caregiver={m.selectedCaregiver}
       />
-      <EditCaregiverDialog 
-        open={isEditCaregiverOpen} 
-        onOpenChange={setIsEditCaregiverOpen}
-        caregiver={selectedCaregiver}
-        onUpdate={handleUpdateCaregiver}
-      />
-      <CaregiverDetailsDialog 
-        open={isDetailsCaregiverOpen} 
-        onOpenChange={setIsDetailsCaregiverOpen}
-        caregiver={selectedCaregiver}
-      />
-      <PatientDetailsDialog 
-        open={isPatientDetailsOpen} 
-        onOpenChange={setIsPatientDetailsOpen}
-        patient={selectedPatient}
+      <PatientDetailsDialog
+        open={m.isPatientDetailsOpen}
+        onOpenChange={m.setIsPatientDetailsOpen}
+        patient={m.selectedPatient}
       />
     </Layout>
   );
