@@ -3,37 +3,11 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, displayName } from '@/contexts/AuthContext';
 import { ROLE_LABEL } from '@/lib/supabase';
-import { 
-  Calendar, 
-  Home, 
-  MessageSquare, 
-  Settings, 
-  User,
-  Bell,
-  FileText,
-  Clock,
-  LogOut,
-  Clipboard,
-  Award,
-  Heart,
-  ThumbsUp,
-  Send,
-  FileCheck,
-  FileEdit,
-  Users,
-  DollarSign,
-  BarChart,
-  CalendarDays
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavBadges } from '@/hooks/useNavBadges';
+import { NAV_ITEMS, isActivePath } from './navItems';
 import { toast } from 'sonner';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
 
 interface SidebarProps {
   role: 'admin' | 'caregiver' | 'patient';
@@ -45,48 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const { profile, signOut } = useAuth();
   const name = displayName(profile);
   
-  const adminNavItems: NavItem[] = [
-    { label: 'Dashboard', href: '/admin', icon: Home },
-    { label: 'Scheduler', href: '/admin/scheduler', icon: CalendarDays },
-    { label: 'Calendar', href: '/admin/calendar', icon: Calendar },
-    { label: 'Caregivers', href: '/admin/caregivers', icon: Users },
-    { label: 'Patients', href: '/admin/patients', icon: Heart },
-    { label: 'Requests', href: '/admin/requests', icon: Send },
-    { label: 'Billing', href: '/admin/billing', icon: DollarSign },
-    { label: 'Reports', href: '/admin/reports', icon: BarChart },
-    { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
-    { label: 'Notifications', href: '/admin/notifications', icon: Bell },
-    { label: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
-  
-  const caregiverNavItems: NavItem[] = [
-    { label: 'Home', href: '/caregiver', icon: Home },
-    { label: 'Schedule', href: '/caregiver/schedule', icon: Calendar },
-    { label: 'My Patients', href: '/caregiver/patients', icon: Users },
-    { label: 'Messages', href: '/caregiver/messages', icon: MessageSquare },
-    { label: 'Notifications', href: '/caregiver/notifications', icon: Bell },
-    { label: 'Profile', href: '/caregiver/profile', icon: User },
-  ];
-  
-  const patientNavItems: NavItem[] = [
-    { label: 'Home', href: '/patient', icon: Home },
-    { label: 'My Visits', href: '/patient/visits', icon: Clock },
-    { label: 'Care Plan', href: '/patient/care-plan', icon: FileCheck },
-    { label: 'Requests', href: '/patient/requests', icon: Send },
-    { label: 'Invoices', href: '/patient/invoices', icon: FileText },
-    { label: 'Feedback', href: '/patient/feedback', icon: ThumbsUp },
-    { label: 'Messages', href: '/patient/messages', icon: MessageSquare },
-    { label: 'Notifications', href: '/patient/notifications', icon: Bell },
-    { label: 'Profile', href: '/patient/profile', icon: User },
-  ];
-  
-  const navItemsByRole = {
-    admin: adminNavItems,
-    caregiver: caregiverNavItems,
-    patient: patientNavItems,
-  };
-  
-  const navItems = navItemsByRole[role];
+  const navItems = NAV_ITEMS[role];
   const badges = useNavBadges();
   
   const handleLogout = async () => {
@@ -96,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   };
   
   return (
-    <aside className="print:hidden hidden md:flex flex-col w-64 h-screen bg-secondary text-white">
+    <aside className="print:hidden hidden md:flex flex-col w-64 h-full bg-secondary text-white">
       <div className="p-4 flex items-center">
         <h1 className="text-xl font-bold">CareNest</h1>
       </div>
@@ -107,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </div>
         <nav className="space-y-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.href || (item.href.split('/').length > 2 && location.pathname.startsWith(item.href + '/'));
+            const isActive = isActivePath(item.href, location.pathname);
             
             return (
               <Link
