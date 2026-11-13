@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
       {/* Hero section */}
       <div className="bg-secondary md:w-1/2 p-8 flex flex-col justify-center">
         <div className="max-w-md mx-auto text-white">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">CareNest</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4"><Link to="/" className="hover:text-accent">CareNest</Link></h1>
           <p className="text-xl mb-8">Healthcare coordination platform for homecare agencies, caregivers and patients.</p>
           <div className="space-y-6 text-sm">
             <div className="flex items-start">

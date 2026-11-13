@@ -43,7 +43,7 @@ const ForgotPasswordPage: React.FC = () => {
               If an account exists for <span className="font-medium">{email}</span>, we sent a link to reset your password.
             </p>
             <Button asChild className="w-full">
-              <Link to="/">Back to sign in</Link>
+              <Link to="/login">Back to sign in</Link>
             </Button>
           </div>
         ) : (
@@ -61,7 +61,7 @@ const ForgotPasswordPage: React.FC = () => {
               {submitting ? 'Sending...' : 'Send reset link'}
             </Button>
             <p className="text-center text-sm text-gray-600">
-              <Link to="/" className="font-medium text-primary hover:underline">Back to sign in</Link>
+              <Link to="/login" className="font-medium text-primary hover:underline">Back to sign in</Link>
             </p>
           </form>
         )}

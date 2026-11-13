@@ -445,7 +445,7 @@ const SignupPage: React.FC = () => {
             We sent a confirmation link to <span className="font-medium">{confirmEmail}</span>. Click it to activate your account, then sign in.
           </p>
           <Button asChild className="w-full">
-            <Link to="/">Back to sign in</Link>
+            <Link to="/login">Back to sign in</Link>
           </Button>
         </div>
       </div>
@@ -457,7 +457,7 @@ const SignupPage: React.FC = () => {
       {/* Hero section */}
       <div className="bg-secondary md:w-5/12 p-8 flex flex-col justify-center">
         <div className="max-w-md mx-auto text-white">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">CareNest</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4"><Link to="/" className="hover:text-accent">CareNest</Link></h1>
           <p className="text-xl mb-6">Create your account</p>
           <p className="text-white/80 hidden md:block">{active.blurb}</p>
         </div>
@@ -490,7 +490,7 @@ const SignupPage: React.FC = () => {
 
           <p className="text-center text-sm text-gray-600 mt-6">
             Already have an account?{' '}
-            <Link to="/" className="font-medium text-primary hover:underline">Sign in</Link>
+            <Link to="/login" className="font-medium text-primary hover:underline">Sign in</Link>
           </p>
         </div>
       </div>

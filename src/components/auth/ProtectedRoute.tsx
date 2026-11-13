@@ -15,7 +15,7 @@ const ProtectedRoute: React.FC<{ role: Role }> = ({ role }) => {
   const { session, profile, loading } = useAuth();
 
   if (loading) return <FullPageSpinner />;
-  if (!session || !profile) return <Navigate to="/" replace />;
+  if (!session || !profile) return <Navigate to="/login" replace />;
   if (profile.role !== role) return <Navigate to={ROLE_HOME[profile.role]} replace />;
 
   return (
