@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bell, LogOut } from 'lucide-react';
+import { ArrowLeftRight, Bell, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
@@ -93,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ title, role }) => {
               <div className="flex items-center cursor-pointer">
                 <div className="hidden md:block text-sm text-right mr-3">
                   <div className="font-medium">{roleInfo.name}</div>
-                  <div className="text-xs text-gray-500">{roleInfo.title}</div>
+                  <div className="text-xs text-gray-500">{roleInfo.title}{profile?.agency?.name && role !== 'admin' ? ` · ${profile.agency.name}` : ''}</div>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-secondary font-medium">
                   {(roleInfo.name || role).charAt(0).toUpperCase()}
@@ -107,6 +107,19 @@ const Header: React.FC<HeaderProps> = ({ title, role }) => {
                     Agency code (share with caregivers and patients)
                     <div className="font-mono text-base font-semibold text-gray-900 tracking-wider">{profile.agency.code}</div>
                   </div>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {role !== 'admin' && (
+                <>
+                  <div className="px-2 py-1.5 text-xs text-gray-500">
+                    Using
+                    <div className="text-sm font-semibold text-gray-900">{profile?.agency?.name}</div>
+                  </div>
+                  <DropdownMenuItem onClick={() => navigate('/choose-agency')}>
+                    <ArrowLeftRight className="h-4 w-4 mr-2" />
+                    Switch or join agency
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
@@ -129,6 +142,11 @@ const Header: React.FC<HeaderProps> = ({ title, role }) => {
       </div>
       <div className="md:hidden px-4 py-2">
         <h1 className="text-xl font-bold">{title}</h1>
+        {role !== 'admin' && profile?.agency?.name && (
+          <Link to="/choose-agency" className="text-xs text-gray-500 hover:text-primary">
+            {profile.agency.name} · <span className="text-primary">Switch</span>
+          </Link>
+        )}
       </div>
     </header>
   );

@@ -17,6 +17,7 @@ import * as z from "zod";
 import { supabase, ROLE_HOME } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { FullPageSpinner } from '@/components/auth/ProtectedRoute';
+import { fetchMyAgencies } from '@/hooks/data/useAgencies';
 
 const formSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address."),
@@ -68,6 +69,15 @@ const LoginPage: React.FC = () => {
       await supabase.auth.signOut();
       toast({ variant: "destructive", title: "Account not set up", description: "No profile found for this account." });
       return;
+    }
+
+    // Caregivers and patients who belong to several agencies choose one first.
+    if (userProfile.role !== 'admin') {
+      const agencies = await fetchMyAgencies().catch(() => []);
+      if (agencies.length > 1) {
+        navigate('/choose-agency');
+        return;
+      }
     }
 
     toast({ title: "Signed in", description: userProfile.first_name ? `Welcome back, ${userProfile.first_name}!` : "Welcome back!" });

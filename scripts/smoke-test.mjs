@@ -392,6 +392,74 @@ await step('"Download my data" works and leaves out concern notes', async () => 
   ok(c.caregiver_record && c.care_notes_written.length >= 1, 'carer export incomplete');
 });
 
+// ---------- 10. One login, several agencies (009) ----------
+console.log('\n10. One login, several agencies (needs 009)');
+
+const admin2 = client();
+const stranger = client();
+
+await step('A second agency signs up', async () => {
+  must(await admin2.auth.signUp({ email: email('admin2'), password: PASSWORD, options: { data: { role: 'admin', agency_name: `Smoke Test Care ${run} B`, postcode: 'E1 6AN' } } }), 'signUp');
+  const p = must(await admin2.from('profiles').select('agency_id, agency:agencies(code)').single(), 'profile');
+  ids.agency2 = p.agency_id;
+  ids.code2 = p.agency.code;
+});
+
+await step('Caregiver joins the second agency with its code, same login', async () => {
+  const role = must(await carer.rpc('join_agency', { p_code: ids.code2, p_role: 'caregiver' }), 'join_agency');
+  ok(role === 'caregiver', `role ${role}`);
+  const list = must(await carer.rpc('my_agencies'), 'my_agencies');
+  ok(list.length === 2, `agencies ${list.length}`);
+  ok(list.find((a) => a.is_current)?.agency_id === ids.agency2, 'not switched to the new agency');
+  const n = await notificationsOf(admin2);
+  ok(n.some((x) => x.type === 'signup'), 'second agency was not told about the new caregiver');
+});
+
+await step('Agencies stay separate: in agency B the carer sees none of agency A', async () => {
+  ok(must(await carer.rpc('my_patients'), 'my_patients').length === 0, 'sees agency A patients');
+  ok(must(await carer.from('visits').select('id'), 'visits').length === 0, 'sees agency A visits');
+  ok(must(await carer.from('messages').select('id'), 'messages').length === 0, 'sees agency A messages');
+  ok(must(await admin2.from('caregivers').select('id, agency_id'), 'caregivers').every((c) => c.agency_id === ids.agency2), 'agency B sees agency A records');
+});
+
+await step('Messages and notifications follow the agency in use', async () => {
+  const me = must(await carer.auth.getUser(), 'user').user;
+  must(await admin2.from('messages').insert({ agency_id: ids.agency2, thread_user_id: me.id, body: 'Welcome to agency B' }), 'agency B message');
+  ok((await notificationsOf(carer)).some((x) => x.body === 'Welcome to agency B'), 'agency B notification missing while in B');
+  must(await carer.rpc('switch_agency', { p_agency_id: ids.agencyId }), 'switch back');
+  ok(!(await notificationsOf(carer)).some((x) => x.body === 'Welcome to agency B'), 'agency B notification shown while in A');
+  ok(must(await carer.from('messages').select('agency_id'), 'messages').every((m) => m.agency_id === ids.agencyId), 'agency B messages shown in A');
+  ok(must(await carer.rpc('my_patients'), 'my_patients').length === 1, 'agency A patients missing after switching back');
+});
+
+await step('A patient at one agency can be a caregiver at another', async () => {
+  must(await family.rpc('join_agency', { p_code: ids.code2, p_role: 'caregiver' }), 'join');
+  const p = must(await family.from('profiles').select('role, agency_id').single(), 'profile');
+  ok(p.role === 'caregiver' && p.agency_id === ids.agency2, `now ${p.role}`);
+  ok(must(await family.from('patients').select('id'), 'patients').length === 0, 'patient record visible in agency B');
+  const back = must(await family.rpc('switch_agency', { p_agency_id: ids.agencyId }), 'switch back');
+  ok(back === 'patient', `back as ${back}`);
+  ok(must(await family.from('visits').select('id'), 'visits').length === 2, 'patient visits missing after switching back');
+});
+
+await step('Joining and switching are checked', async () => {
+  ok((await carer.rpc('join_agency', { p_code: ids.code2, p_role: 'patient' })).error, 'joined the same agency twice');
+  ok((await carer.rpc('join_agency', { p_code: 'ZZZZZZZZ', p_role: 'caregiver' })).error, 'joined with a wrong code');
+  ok((await admin.rpc('join_agency', { p_code: ids.code2, p_role: 'caregiver' })).error, 'an office login joined another agency');
+  must(await stranger.auth.signUp({ email: email('stranger'), password: PASSWORD, options: { data: { role: 'caregiver', first_name: 'S', last_name: 'T', agency_code: ids.code2 } } }), 'signUp');
+  ok((await stranger.rpc('switch_agency', { p_agency_id: ids.agencyId })).error, 'switched into an agency without belonging to it');
+});
+
+await step('An agency adding someone who already has a login links it to them', async () => {
+  must(await admin2.from('patients').insert({ agency_id: ids.agency2, first_name: 'Amira', last_name: 'Khan', email: email('carer') }), 'insert');
+  // The carer is already a caregiver at agency B, so no second record in the same agency gets linked.
+  const rows = must(await admin2.from('patients').select('user_id').eq('email', email('carer')), 'patients');
+  ok(rows.length === 1 && rows[0].user_id === null, 'linked a second record in the same agency');
+  must(await admin.from('caregivers').insert({ agency_id: ids.agencyId, first_name: 'S', last_name: 'T', email: email('stranger') }), 'insert');
+  const list = must(await stranger.rpc('my_agencies'), 'my_agencies');
+  ok(list.length === 2, `stranger now has ${list.length} agencies`);
+});
+
 // ---------- Summary ----------
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) console.log('\nFailures:\n - ' + failures.join('\n - '));

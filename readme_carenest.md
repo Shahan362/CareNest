@@ -156,6 +156,7 @@ Run the SQL files in `supabase/migrations/` **in order** in **Supabase → SQL E
 | `006_patient_side.sql` | `care_requests`, `feedback`, emergency contact + GP on patients, `my_caregivers()`, patients read own care notes |
 | `007_messages_notifications.sql` | `messages`, `notifications`, the triggers that create notifications, Realtime, function permission fix |
 | `008_security.sql` | Two-step verification enforced for admins, inactive caregivers lose access, "Download my data" |
+| `009_multi_agency.sql` | One login for several agencies: caregivers and patients can join more agencies with a code and switch between them |
 
 ### Tables
 
@@ -207,6 +208,16 @@ Caregivers can't edit the `visits` table directly. They use three database funct
 - **Concern notes are hidden from patients**, because they can be safeguarding matters.
 - **Carers' privacy:** patients get carers' names only, through `my_caregivers()` ("Amira K."), not their phone, email or hours.
 - **Emergency contact and GP:** the patient edits them on their profile (`update_my_contacts`), the admin in the patient form, and carers see them on the visit page.
+
+### One login, several agencies (009)
+- A **caregiver** can work for several agencies and a **patient** can get care from several, with the **same email and password**. A person can even be a caregiver at one agency and a patient at another (but only one role per agency).
+- **Joining:** signed in, open the menu (your initial, top right) → **Switch or join agency** → **Join another agency**, enter that agency's code and choose caregiver or patient. If the agency already added you with that email, your existing record is used. Signing up again with the same email is refused with a message explaining this.
+- **Choosing:** after signing in, someone with more than one agency sees **Choose an agency**: only *their* agencies, searchable by name or postcode, with their role and unread notifications for each. Agency codes are never listed.
+- **Switching:** the same screen, from the top-right menu or "Switch" under the page title on phones. The whole app then shows that agency.
+- **Kept separate:** visits, patients, notes, messages, notifications, invoices and "Download my data" are always for the agency in use. Agency A never sees anything from agency B.
+- **Office (admin) logins belong to one agency** and can't join others (they see everyone's health information). Use a different email for a second agency's office.
+- **Agency adds someone who already has a login:** the record is linked to that login automatically, and the agency appears in the person's list next time they sign in.
+- How it works: `profiles.agency_id` / `profiles.role` hold the agency **in use**; `switch_agency()` and `join_agency()` change it after checking the person really belongs there, so all the existing "my agency" security rules keep working.
 
 ### Access and privacy (008)
 - **One office login per agency for now.** Signing up as "Agency" always creates a *new* agency. Inviting more office colleagues is planned for later (see section 11).
@@ -322,7 +333,7 @@ Admins can edit their agency's details but **not the agency code directly**. It 
 | Command | What it checks |
 |---|---|
 | `npm test` | 14 unit tests of the rules the screens use: repeating visits, clash checks, overdue/part-paid invoices, check-in window and "late" rule, hours worked, UK dates and money |
-| `npm run test:smoke` | Signs up a throw-away test agency, carer and family in **your Supabase project** and runs 36 checks of the real flows and security rules (sign-up linking, visits, check-in/out, care notes, concerns, requests, feedback, messages, invoices, payments, who-can-see-what, inactive caregivers, data export). Needs "Confirm email" OFF. It prints SQL to delete the test data afterwards. |
+| `npm run test:smoke` | Signs up a throw-away test agency, carer and family in **your Supabase project** and runs 43 checks of the real flows and security rules (sign-up linking, visits, check-in/out, care notes, concerns, requests, feedback, messages, invoices, payments, who-can-see-what, inactive caregivers, data export, one login across two agencies). Needs "Confirm email" OFF. It prints SQL to delete the test data afterwards. |
 
 ### Manual test scenario: one month at an agency
 
@@ -441,6 +452,7 @@ Use two browsers (or one normal + one private window) so you can watch things ar
 | Patient pages say "Could not find the function public.my_caregivers" or `care_requests` does not exist | `006_patient_side.sql` has not been run |
 | Messages / Notifications say `office_threads`, `messages` or `notifications` does not exist | `007_messages_notifications.sql` has not been run |
 | "Download my data" gives an error | `008_security.sql` has not been run |
+| "Switch or join agency" shows an error / `my_agencies` does not exist | `009_multi_agency.sql` has not been run |
 | "Two-step verification is switched off for this project" | Supabase → Authentication → Multi-Factor → enable TOTP |
 | Admin pages show no data after turning on 2FA | Sign out and in again and enter the 6-digit code (the database only gives admins data after the second step) |
 | Notifications only appear after a refresh | Realtime isn't reaching the browser. In Supabase → **Database → Publications → supabase_realtime**, check `messages` and `notifications` are ticked (007 does this). Counts still refresh every minute |

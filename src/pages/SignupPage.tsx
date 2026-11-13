@@ -388,6 +388,10 @@ const SignupPage: React.FC = () => {
 
   const handleSubmit: OnSubmit = async ({ role: r, email: userEmail, password, displayName, agencyCode: code, metadata }) => {
     const emailField = r === 'admin' ? 'agencyEmail' : 'email';
+    const takenMessage =
+      r === 'admin'
+        ? 'An account with this email already exists.'
+        : 'This email already has a CareNest account. Sign in, then choose "Switch or join agency" to add this agency with its code.';
 
     // Check the agency code first so we can show a clear error on that field.
     if (code) {
@@ -410,14 +414,14 @@ const SignupPage: React.FC = () => {
         return { message: 'Too many sign-up emails were sent recently. Please wait a few minutes and try again.' };
       }
       if (/already registered/i.test(error.message)) {
-        return { field: emailField, message: 'An account with this email already exists.' };
+        return { field: emailField, message: takenMessage };
       }
       return { message: error.message };
     }
 
     // With email confirmation on, Supabase hides taken emails by returning a user with no identities.
     if (data.user && data.user.identities?.length === 0) {
-      return { field: emailField, message: 'An account with this email already exists.' };
+      return { field: emailField, message: takenMessage };
     }
 
     if (!data.session) {

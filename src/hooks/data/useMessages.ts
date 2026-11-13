@@ -94,14 +94,21 @@ export function useMessageContacts() {
   return useQuery({
     queryKey: ['messages', 'contacts', profile?.agency_id],
     enabled: profile?.role === 'admin',
-    queryFn: async () =>
-      unwrap(
-        await supabase
-          .from('profiles')
-          .select('id, role, first_name, last_name, email')
-          .eq('agency_id', profile!.agency_id)
-          .in('role', ['caregiver', 'patient'])
-          .order('first_name'),
-      ) as { id: string; role: 'caregiver' | 'patient'; first_name: string | null; last_name: string | null; email: string }[],
+    queryFn: async () => {
+      // People with a login may belong to other agencies too, so read this agency's own records.
+      const cols = 'user_id, first_name, last_name, email';
+      const [cg, pt] = await Promise.all([
+        supabase.from('caregivers').select(cols).eq('agency_id', profile!.agency_id).not('user_id', 'is', null),
+        supabase.from('patients').select(cols).eq('agency_id', profile!.agency_id).not('user_id', 'is', null),
+      ]);
+      type Rec = { user_id: string; first_name: string | null; last_name: string | null; email: string | null };
+      const toContact = (role: 'caregiver' | 'patient') => (r: Rec) => ({
+        id: r.user_id, role, first_name: r.first_name, last_name: r.last_name, email: r.email ?? '',
+      });
+      return [
+        ...(unwrap(cg) as Rec[]).map(toContact('caregiver')),
+        ...(unwrap(pt) as Rec[]).map(toContact('patient')),
+      ].sort((a, b) => (a.first_name ?? '').localeCompare(b.first_name ?? ''));
+    },
   });
 }
