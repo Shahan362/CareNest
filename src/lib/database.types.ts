@@ -154,6 +154,7 @@ export interface PaymentRow {
 export interface AgencyRow {
   id: string;
   name: string;
+  branch_name: string | null;
   registration_number: string | null;
   email: string | null;
   phone: string | null;

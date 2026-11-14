@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Control, FieldValues, Path, useForm, UseFormReturn } from 'react-hook-form';
+import { Control, FieldValues, Path, PathValue, useForm, UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
 import { Building2, HeartPulse, MailCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase, ROLE_HOME, type Role } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import AgencyPicker, { type AgencyOption } from '@/components/agency/AgencyPicker';
 
 
 const ROLES: { value: Role; label: string; icon: React.ElementType; blurb: string }[] = [
@@ -59,7 +60,11 @@ const passwordsMatchError = { message: 'Passwords do not match.', path: ['confir
 
 const name = (label: string) => z.string().trim().min(1, `${label} is required.`);
 const email = z.string().trim().email('Please enter a valid email address.');
-const agencyCode = z.string().trim().min(1, 'Agency code is required. Ask your agency for it.');
+// The agency is picked from the list (agencyId) or, as an alternative, typed as a code.
+const agencyFields = { agencyId: z.string(), agencyCode: z.string().trim() };
+const agencyChosen = <T extends { agencyId?: string; agencyCode?: string }>(d: T) => !!d.agencyId || !!d.agencyCode;
+const agencyChosenError = { message: 'Please choose your agency.', path: ['agencyId'] };
+const agencyDefaults = { agencyId: '', agencyCode: '' };
 
 const passwordDefaults = { password: '', confirmPassword: '', acceptTerms: false };
 
@@ -68,6 +73,7 @@ const passwordDefaults = { password: '', confirmPassword: '', acceptTerms: false
 const adminSchema = z
   .object({
     agencyName: name('Agency / company name'),
+    branchName: z.string().trim().max(60, 'Branch name is too long.'),
     registrationNumber: z
       .string()
       .trim()
@@ -87,10 +93,11 @@ const caregiverSchema = z
     lastName: name('Last name'),
     email,
     phone,
-    agencyCode,
+    ...agencyFields,
     ...passwordFields,
   })
-  .refine(passwordsMatch, passwordsMatchError);
+  .refine(passwordsMatch, passwordsMatchError)
+  .refine(agencyChosen, agencyChosenError);
 
 const patientSchema = z
   .object({
@@ -101,10 +108,11 @@ const patientSchema = z
     phone,
     address: z.string().trim().min(5, 'Please enter your full address.'),
     postcode,
-    agencyCode,
+    ...agencyFields,
     ...passwordFields,
   })
-  .refine(passwordsMatch, passwordsMatchError);
+  .refine(passwordsMatch, passwordsMatchError)
+  .refine(agencyChosen, agencyChosenError);
 
 // ---------- Reusable fields ----------
 
@@ -169,6 +177,66 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pt-2">{children}</h3>
 );
 
+// ---------- Agency choice (caregivers and patients) ----------
+
+type AgencyFormValues = FieldValues & { agencyId?: string; agencyCode?: string };
+
+/** Pick the agency from a searchable list; typing the agency code is the alternative. */
+function AgencyChoice<T extends AgencyFormValues>({ form }: { form: UseFormReturn<T> }) {
+  const [picked, setPicked] = useState<AgencyOption | null>(null);
+  const [useCode, setUseCode] = useState(false);
+  const set = (field: 'agencyId' | 'agencyCode', v: string) =>
+    form.setValue(field as Path<T>, v as PathValue<T, Path<T>>, { shouldValidate: form.formState.isSubmitted });
+  const errors = form.formState.errors as Record<string, { message?: string } | undefined>;
+  const error = errors.agencyId?.message;
+
+  if (useCode) {
+    return (
+      <div className="space-y-2">
+        <TextField control={form.control} name={'agencyCode' as Path<T>} label="Agency code" placeholder="e.g. 6LFEH4BP" />
+        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+        <button
+          type="button"
+          className="text-sm font-medium text-primary hover:underline"
+          onClick={() => {
+            set('agencyCode', '');
+            setUseCode(false);
+          }}
+        >
+          Choose from the list instead
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor="agency-search" className="text-sm font-medium">Find your agency</label>
+      <AgencyPicker
+        id="agency-search"
+        value={picked}
+        invalid={!!error}
+        onChange={(a) => {
+          setPicked(a);
+          set('agencyId', a?.id ?? '');
+        }}
+      />
+      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+      <button
+        type="button"
+        className="text-sm font-medium text-primary hover:underline"
+        onClick={() => {
+          setPicked(null);
+          set('agencyId', '');
+          setUseCode(true);
+        }}
+      >
+        I have an agency code instead
+      </button>
+    </div>
+  );
+}
+
 // ---------- Role forms ----------
 
 /** Error to show on a specific field, or a general error when field is omitted. */
@@ -203,6 +271,7 @@ const AdminSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
     resolver: zodResolver(adminSchema),
     defaultValues: {
       agencyName: '',
+      branchName: '',
       registrationNumber: '',
       agencyEmail: '',
       phone: '',
@@ -225,6 +294,7 @@ const AdminSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
             displayName: d.agencyName,
             metadata: {
               agency_name: d.agencyName,
+              branch_name: d.branchName,
               registration_number: d.registrationNumber,
               phone: d.phone,
               address: d.businessAddress,
@@ -237,6 +307,7 @@ const AdminSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
       >
         <SectionTitle>Agency details</SectionTitle>
         <TextField control={c} name="agencyName" label="Agency / Company Name" placeholder="e.g. Sunrise Homecare Ltd" autoComplete="organization" />
+        <TextField control={c} name="branchName" label="Branch name (optional)" placeholder="e.g. Camden. Helps caregivers and patients find the right office" />
         <TextField control={c} name="registrationNumber" label="Company Registration Number" placeholder="e.g. 12345678" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField control={c} name="agencyEmail" label="Agency Email Address" type="email" placeholder="office@agency.com" autoComplete="email" />
@@ -259,7 +330,7 @@ const AdminSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
 const CaregiverSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
   const form = useForm<z.infer<typeof caregiverSchema>>({
     resolver: zodResolver(caregiverSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', phone: '', agencyCode: '', ...passwordDefaults },
+    defaultValues: { firstName: '', lastName: '', email: '', phone: '', ...agencyDefaults, ...passwordDefaults },
   });
   const c = form.control;
   const submit = useSignupSubmit(form, onSubmit);
@@ -273,12 +344,12 @@ const CaregiverSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => 
             email: d.email,
             password: d.password,
             displayName: d.firstName,
-            agencyCode: d.agencyCode,
+            agencyCode: d.agencyId ? undefined : d.agencyCode,
             metadata: {
               first_name: d.firstName,
               last_name: d.lastName,
               phone: d.phone,
-              agency_code: d.agencyCode,
+              ...(d.agencyId ? { agency_id: d.agencyId } : { agency_code: d.agencyCode }),
             },
           }),
         )}
@@ -295,8 +366,8 @@ const CaregiverSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => 
           <TextField control={c} name="phone" label="Phone Number" type="tel" autoComplete="tel" />
         </div>
 
-        <SectionTitle>Agency</SectionTitle>
-        <TextField control={c} name="agencyCode" label="Agency Code" placeholder="Provided by your agency" />
+        <SectionTitle>Your agency</SectionTitle>
+        <AgencyChoice form={form} />
 
         <SectionTitle>Account security</SectionTitle>
         <PasswordSection control={c} />
@@ -313,7 +384,7 @@ const PatientSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
   const form = useForm<z.infer<typeof patientSchema>>({
     resolver: zodResolver(patientSchema),
     defaultValues: {
-      firstName: '', lastName: '', dateOfBirth: '', email: '', phone: '', address: '', postcode: '', agencyCode: '',
+      firstName: '', lastName: '', dateOfBirth: '', email: '', phone: '', address: '', postcode: '', ...agencyDefaults,
       ...passwordDefaults,
     },
   });
@@ -329,7 +400,7 @@ const PatientSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
             email: d.email,
             password: d.password,
             displayName: d.firstName,
-            agencyCode: d.agencyCode,
+            agencyCode: d.agencyId ? undefined : d.agencyCode,
             metadata: {
               first_name: d.firstName,
               last_name: d.lastName,
@@ -337,7 +408,7 @@ const PatientSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
               phone: d.phone,
               address: d.address,
               postcode: d.postcode,
-              agency_code: d.agencyCode,
+              ...(d.agencyId ? { agency_id: d.agencyId } : { agency_code: d.agencyCode }),
             },
           }),
         )}
@@ -355,10 +426,10 @@ const PatientSignupForm: React.FC<{ onSubmit: OnSubmit }> = ({ onSubmit }) => {
           <TextField control={c} name="phone" label="Phone Number" type="tel" autoComplete="tel" />
         </div>
         <TextField control={c} name="address" label="Home Address" placeholder="Street, town / city" autoComplete="street-address" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <TextField control={c} name="postcode" label="Postcode" autoComplete="postal-code" />
-          <TextField control={c} name="agencyCode" label="Agency Code" placeholder="Provided by your agency" />
-        </div>
+        <TextField control={c} name="postcode" label="Postcode" autoComplete="postal-code" />
+
+        <SectionTitle>Your care agency</SectionTitle>
+        <AgencyChoice form={form} />
 
         <SectionTitle>Account security</SectionTitle>
         <PasswordSection control={c} />
@@ -391,7 +462,7 @@ const SignupPage: React.FC = () => {
     const takenMessage =
       r === 'admin'
         ? 'An account with this email already exists.'
-        : 'This email already has a CareNest account. Sign in, then choose "Switch or join agency" to add this agency with its code.';
+        : 'This email already has a CareNest account. Sign in, then choose "Switch or join agency" to add this agency.';
 
     // Check the agency code first so we can show a clear error on that field.
     if (code) {

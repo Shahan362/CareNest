@@ -35,6 +35,7 @@ const optional = (schema: z.ZodString) => z.union([z.literal(''), schema]);
 
 const agencySchema = z.object({
   name: z.string().trim().min(1, 'Agency name is required.'),
+  branch_name: z.string().trim().max(60, 'Branch name is too long.'),
   registration_number: optional(z.string().trim().regex(/^[A-Za-z0-9]{6,10}$/, 'Companies House numbers are 8 characters, e.g. 12345678 or SC123456.')),
   cqc_provider_id: optional(z.string().trim().regex(/^1-\d{6,12}$/, 'CQC provider IDs look like 1-123456789.')),
   email: optional(z.string().trim().email('Please enter a valid email address.')),
@@ -51,6 +52,7 @@ const AgencyDetailsForm: React.FC<{ agency: AgencyRow }> = ({ agency }) => {
   useEffect(() => {
     form.reset({
       name: agency.name ?? '',
+      branch_name: agency.branch_name ?? '',
       registration_number: agency.registration_number ?? '',
       cqc_provider_id: agency.cqc_provider_id ?? '',
       email: agency.email ?? '',
@@ -62,7 +64,7 @@ const AgencyDetailsForm: React.FC<{ agency: AgencyRow }> = ({ agency }) => {
 
   const onSubmit = async (v: AgencyValues) => {
     try {
-      await save.mutateAsync({ ...v, postcode: v.postcode.toUpperCase() });
+      await save.mutateAsync({ ...v, branch_name: v.branch_name || null, postcode: v.postcode.toUpperCase() });
       toast.success('Agency details saved');
       form.reset(v);
     } catch (e) {
@@ -90,7 +92,10 @@ const AgencyDetailsForm: React.FC<{ agency: AgencyRow }> = ({ agency }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-2xl" noValidate>
-        {field('name', 'Agency name')}
+        <div className="grid sm:grid-cols-2 gap-4">
+          {field('name', 'Agency name')}
+          {field('branch_name', 'Branch name (optional)', { placeholder: 'e.g. Camden', description: 'Shown with your name when caregivers and patients search for you at sign-up.' })}
+        </div>
         <div className="grid sm:grid-cols-2 gap-4">
           {field('registration_number', 'Companies House number', { placeholder: '12345678' })}
           {field('cqc_provider_id', 'CQC provider ID', { placeholder: '1-123456789', description: 'Shown on invoices. Find it on your CQC registration.' })}

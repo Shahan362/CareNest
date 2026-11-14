@@ -460,6 +460,38 @@ await step('An agency adding someone who already has a login links it to them', 
   ok(list.length === 2, `stranger now has ${list.length} agencies`);
 });
 
+// ---------- 11. Find your agency at sign-up (010) ----------
+console.log('\n11. Find your agency at sign-up (needs 010)');
+
+await step('Agency search works before sign-in by name, branch and postcode, and never shows codes', async () => {
+  must(await admin2.from('agencies').update({ branch_name: `Branch ${run}` }).eq('id', ids.agency2), 'set branch');
+  const anon = client();
+  const byName = must(await anon.rpc('search_agencies', { p_query: `Smoke Test Care ${run} B` }), 'search name');
+  ok(byName.some((a) => a.id === ids.agency2), 'not found by name');
+  ok(byName.every((a) => !('code' in a)), 'search results include agency codes');
+  const byBranch = must(await anon.rpc('search_agencies', { p_query: `branch ${run}` }), 'search branch');
+  ok(byBranch.some((a) => a.id === ids.agency2 && a.branch_name === `Branch ${run}`), 'not found by branch');
+  const byPostcode = must(await anon.rpc('search_agencies', { p_query: 'e16an' }), 'search postcode');
+  ok(byPostcode.some((a) => a.id === ids.agency2), 'not found by postcode without the space');
+  ok(must(await anon.rpc('search_agencies', { p_query: 'a' }), 'short').length === 0, 'one letter returned results');
+});
+
+await step('Caregiver signs up by picking the agency from the list (no code)', async () => {
+  const picker = client();
+  must(await picker.auth.signUp({ email: email('picker'), password: PASSWORD, options: { data: { role: 'caregiver', first_name: 'Pia', last_name: 'Picker', agency_id: ids.agency2 } } }), 'signUp');
+  const p = must(await picker.from('profiles').select('role, agency_id').single(), 'profile');
+  ok(p.role === 'caregiver' && p.agency_id === ids.agency2, 'joined the wrong agency');
+  ok(must(await admin2.from('caregivers').select('id').eq('email', email('picker')), 'record').length === 1, 'no caregiver record');
+  const role = must(await picker.rpc('join_agency_by_id', { p_agency_id: ids.agencyId, p_role: 'patient' }), 'join by id');
+  ok(role === 'patient', `joined as ${role}`);
+  ok(must(await picker.rpc('my_agencies'), 'my_agencies').length === 2, 'second agency not added');
+});
+
+await step('Sign-up with an unknown agency is refused', async () => {
+  const { error } = await client().auth.signUp({ email: email('noagency'), password: PASSWORD, options: { data: { role: 'patient', first_name: 'N', last_name: 'A', agency_id: '00000000-0000-0000-0000-000000000000' } } });
+  ok(error, 'signed up with an agency that does not exist');
+});
+
 // ---------- Summary ----------
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) console.log('\nFailures:\n - ' + failures.join('\n - '));

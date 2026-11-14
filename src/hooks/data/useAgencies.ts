@@ -56,9 +56,11 @@ export function useSwitchAgency() {
   return useAgencyChange(async (agencyId: string) => unwrap(await supabase.rpc('switch_agency', { p_agency_id: agencyId })) as Role);
 }
 
+/** Join by picking the agency from the list (agencyId) or by its code. */
 export function useJoinAgency() {
-  return useAgencyChange(
-    async (a: { code: string; role: 'caregiver' | 'patient' }) =>
-      unwrap(await supabase.rpc('join_agency', { p_code: a.code, p_role: a.role })) as Role,
+  return useAgencyChange(async (a: { agencyId?: string; code?: string; role: 'caregiver' | 'patient' }) =>
+    a.agencyId
+      ? (unwrap(await supabase.rpc('join_agency_by_id', { p_agency_id: a.agencyId, p_role: a.role })) as Role)
+      : (unwrap(await supabase.rpc('join_agency', { p_code: a.code, p_role: a.role })) as Role),
   );
 }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { FullPageSpinner } from '@/components/auth/ProtectedRoute';
 import { ErrorState } from '@/components/admin/DataState';
 import { useAuth, displayName } from '@/contexts/AuthContext';
+import AgencyPicker, { type AgencyOption } from '@/components/agency/AgencyPicker';
 import { useJoinAgency, useMyAgencies, useSwitchAgency, type MyAgency } from '@/hooks/data/useAgencies';
 import { ROLE_HOME } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,8 @@ const ChooseAgencyPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [showJoin, setShowJoin] = useState(false);
   const [code, setCode] = useState('');
+  const [picked, setPicked] = useState<AgencyOption | null>(null);
+  const [useCode, setUseCode] = useState(false);
   const [joinRole, setJoinRole] = useState<'caregiver' | 'patient'>('caregiver');
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -61,9 +64,9 @@ const ChooseAgencyPage: React.FC = () => {
 
   const join = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim().length < 4) return toast.error('Please enter the agency code.');
+    if (useCode ? code.trim().length < 4 : !picked) return toast.error(useCode ? 'Please enter the agency code.' : 'Please choose the agency.');
     try {
-      const role = await joinAgency.mutateAsync({ code, role: joinRole });
+      const role = await joinAgency.mutateAsync(useCode ? { code, role: joinRole } : { agencyId: picked!.id, role: joinRole });
       toast.success('Agency added. You can switch between your agencies at any time.');
       navigate(ROLE_HOME[role]);
     } catch (err) {
@@ -182,20 +185,42 @@ const ChooseAgencyPage: React.FC = () => {
             <form onSubmit={join} className="space-y-4" noValidate>
               <div>
                 <h2 className="font-semibold">Join another agency</h2>
-                <p className="text-sm text-gray-600">Ask the agency for its code. You keep the same email and password.</p>
+                <p className="text-sm text-gray-600">Find the agency by name, branch or postcode. You keep the same email and password.</p>
               </div>
-              <div>
-                <Label htmlFor="join-code">Agency code</Label>
-                <Input
-                  id="join-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. 6LFEH4BP"
-                  className="mt-1 font-mono tracking-wider"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                />
-              </div>
+              {useCode ? (
+                <div>
+                  <Label htmlFor="join-code">Agency code</Label>
+                  <Input
+                    id="join-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. 6LFEH4BP"
+                    className="mt-1 font-mono tracking-wider"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                  />
+                  <button type="button" onClick={() => setUseCode(false)} className="mt-2 text-sm font-medium text-primary hover:underline">
+                    Choose from the list instead
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="join-agency">Agency</Label>
+                  <div className="mt-1">
+                    <AgencyPicker id="join-agency" value={picked} onChange={setPicked} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPicked(null);
+                      setUseCode(true);
+                    }}
+                    className="mt-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    I have an agency code instead
+                  </button>
+                </div>
+              )}
               <div>
                 <Label>I am joining as</Label>
                 <div className="mt-1 grid grid-cols-2 gap-2">

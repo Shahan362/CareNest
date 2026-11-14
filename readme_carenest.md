@@ -157,6 +157,7 @@ Run the SQL files in `supabase/migrations/` **in order** in **Supabase → SQL E
 | `007_messages_notifications.sql` | `messages`, `notifications`, the triggers that create notifications, Realtime, function permission fix |
 | `008_security.sql` | Two-step verification enforced for admins, inactive caregivers lose access, "Download my data" |
 | `009_multi_agency.sql` | One login for several agencies: caregivers and patients can join more agencies with a code and switch between them |
+| `010_agency_directory.sql` | Find your agency from a searchable list at sign-up (name, branch, address, postcode; never the code), agency branch name |
 
 ### Tables
 
@@ -208,6 +209,13 @@ Caregivers can't edit the `visits` table directly. They use three database funct
 - **Concern notes are hidden from patients**, because they can be safeguarding matters.
 - **Carers' privacy:** patients get carers' names only, through `my_caregivers()` ("Amira K."), not their phone, email or hours.
 - **Emergency contact and GP:** the patient edits them on their profile (`update_my_contacts`), the admin in the patient form, and carers see them on the visit page.
+
+### Finding your agency at sign-up (010)
+- Caregivers and patients **pick their agency from a searchable list** instead of typing a code: type at least 2 letters of the agency name, branch, town or postcode (spaces in postcodes don't matter) and choose from up to 20 matches.
+- The list shows **name, branch, address and postcode**. It **never shows agency codes**: those stay private. "I have an agency code instead" still works.
+- Agencies can add a **Branch name** (e.g. "Camden") at sign-up or in **Settings → Agency**, so people pick the right office of a chain.
+- The same picker is used for **Switch or join agency → Join another agency**.
+- Anyone who picks an agency can join it, so the office gets a notification for every new caregiver or patient. A caregiver sees nothing until the office gives them visits; someone who joined by mistake can be set to Inactive or removed.
 
 ### One login, several agencies (009)
 - A **caregiver** can work for several agencies and a **patient** can get care from several, with the **same email and password**. A person can even be a caregiver at one agency and a patient at another (but only one role per agency).
@@ -333,7 +341,7 @@ Admins can edit their agency's details but **not the agency code directly**. It 
 | Command | What it checks |
 |---|---|
 | `npm test` | 14 unit tests of the rules the screens use: repeating visits, clash checks, overdue/part-paid invoices, check-in window and "late" rule, hours worked, UK dates and money |
-| `npm run test:smoke` | Signs up a throw-away test agency, carer and family in **your Supabase project** and runs 43 checks of the real flows and security rules (sign-up linking, visits, check-in/out, care notes, concerns, requests, feedback, messages, invoices, payments, who-can-see-what, inactive caregivers, data export, one login across two agencies). Needs "Confirm email" OFF. It prints SQL to delete the test data afterwards. |
+| `npm run test:smoke` | Signs up a throw-away test agency, carer and family in **your Supabase project** and runs 46 checks of the real flows and security rules (sign-up linking, visits, check-in/out, care notes, concerns, requests, feedback, messages, invoices, payments, who-can-see-what, inactive caregivers, data export, one login across two agencies, agency search at sign-up). Needs "Confirm email" OFF. It prints SQL to delete the test data afterwards. |
 
 ### Manual test scenario: one month at an agency
 
@@ -453,6 +461,7 @@ Use two browsers (or one normal + one private window) so you can watch things ar
 | Messages / Notifications say `office_threads`, `messages` or `notifications` does not exist | `007_messages_notifications.sql` has not been run |
 | "Download my data" gives an error | `008_security.sql` has not been run |
 | "Switch or join agency" shows an error / `my_agencies` does not exist | `009_multi_agency.sql` has not been run |
+| "Could not search agencies" at sign-up | `010_agency_directory.sql` has not been run |
 | "Two-step verification is switched off for this project" | Supabase → Authentication → Multi-Factor → enable TOTP |
 | Admin pages show no data after turning on 2FA | Sign out and in again and enter the 6-digit code (the database only gives admins data after the second step) |
 | Notifications only appear after a refresh | Realtime isn't reaching the browser. In Supabase → **Database → Publications → supabase_realtime**, check `messages` and `notifications` are ticked (007 does this). Counts still refresh every minute |
